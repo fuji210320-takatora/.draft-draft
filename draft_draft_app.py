@@ -152,7 +152,7 @@ def get_short_team_name(team_name, year):
     return team_name
 
 # =====================================================================
-# 3. draft.tokyo スクレイピング関数
+# 3. draft.tokyo スクレイピング関数 (h3直後方式)
 # =====================================================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_draft_tokyo_data(team_name, year):
@@ -172,32 +172,14 @@ def fetch_draft_tokyo_data(team_name, year):
             return []
             
         soup = BeautifulSoup(response.text, "html.parser")
-        first_table = soup.find("table")
         
         target_table = None
-        for element in soup.find_all(["h2", "h3", "h4", "div", "strong", "th"]):
-            el_text = element.get_text(strip=True)
-            if any(name in el_text for name in target_names):
-                is_before_first_table = False
-                if first_table:
-                    if element.find_all_previous(string=True) and first_table in element.find_all_next():
-                        is_before_first_table = True
-
-                if is_before_first_table:
-                    continue
-                
-                next_node = element.find_next("table")
-                if next_node:
-                    target_table = next_node
-                    break
-
-        if not target_table:
-            all_tables = soup.find_all("table")
-            for t in all_tables:
-                prev_text = t.find_previous(["h2", "h3", "h4", "th", "div", "p"])
-                p_text = prev_text.get_text(strip=True) if prev_text else ""
-                if prev_text and any(name in p_text for name in target_names):
-                    target_table = t
+        for h3 in soup.find_all("h3"):
+            h3_text = h3.get_text(strip=True)
+            if any(name in h3_text for name in target_names):
+                next_table = h3.find_next("table")
+                if next_table:
+                    target_table = next_table
                     break
 
         if not target_table:
@@ -216,18 +198,14 @@ def fetch_draft_tokyo_data(team_name, year):
                 name = cols[1]
                 pos = cols[2] if len(cols) > 2 else "---"
                 
-                pitch_bat = "不明"
-                for c in cols:
-                    if c in ["右右", "左右", "左左", "右左"]:
-                        pitch_bat = c
-                        break
-                
                 status = "入団"
                 row_full_text = row.get_text()
                 if "拒否" in name or "拒否" in row_full_text:
                     status = "入団拒否"
                 elif "×" in name or "外れ" in name or "交渉権なし" in name:
                     status = "その他"
+                elif "ドラフト外" in row_full_text or "ドラフト外" in name:
+                    status = "ドラフト外"
 
                 cat = "育成" if "育成" in rank else "支配下"
                 
@@ -235,7 +213,6 @@ def fetch_draft_tokyo_data(team_name, year):
                     "rank_str": rank,
                     "name": name,
                     "pos": pos if pos in ["投手", "捕手", "内野手", "外野手"] else "---",
-                    "pitch_bat": pitch_bat,
                     "status": status,
                     "category": cat
                 }
@@ -264,11 +241,11 @@ if "used_lotteries" not in st.session_state:
 
 all_years = list(range(2025, 1964, -1)) # 2025年〜1964年
 
-# 初期状態で全年にチェックを入れる
 for y in all_years:
     if f"setup_year_{y}" not in st.session_state:
         st.session_state[f"setup_year_{y}"] = True
 
+# テキストインプットの初期値を安全に設定するためのキー管理
 if "year_text_input" not in st.session_state:
     st.session_state.year_text_input = "2025〜1965"
 
@@ -306,10 +283,9 @@ if not st.session_state.game_started:
     no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない", value=True)
 
     st.markdown("---")
+    st.markdown("---")
     st.markdown("### 📅 対象年度の設定 (1965〜2025)")
-    st.markdown("下のチェックボックスを直接操作するか、テキスト入力欄に範囲や飛び飛びの年で直接入力できます。")
 
-    # テキスト入力欄とチェックボックスの連動処理
     def on_text_change():
         val = st.session_state.year_text_input
         parsed_years = set()
@@ -337,45 +313,46 @@ if not st.session_state.game_started:
             for y in all_years:
                 st.session_state[f"setup_year_{y}"] = (y in parsed_years)
 
+    # ★【ポイント】ここで st.text_input が描画される「前」に値を反映させる
+    if "_next_year_input" in st.session_state:
+        st.session_state.year_text_input = st.session_state.pop("_next_year_input")
+
+    # 実際にテキストインプットを描画
     st.text_input(
         "対象年度を直接入力 (例: `2010〜2020` または `2025, 2020, 2010〜2015`)",
         key="year_text_input",
         on_change=on_text_change
     )
 
-    # クイック選択ボタンの配置
     q_col1, q_col2, q_col3, q_col4 = st.columns(4)
     
     if q_col1.button("2000年以降", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = (2000 <= y <= 2025)
-        if "year_text_input" in st.session_state:
-            del st.session_state["year_text_input"]
-        st.session_state["year_text_input"] = "2025〜2000"
+        st.session_state["_next_year_input"] = "2025〜2000"
         st.rerun()
 
     if q_col2.button("1990年以降", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = (1990 <= y <= 2025)
-        if "year_text_input" in st.session_state:
-            del st.session_state["year_text_input"]
-        st.session_state["year_text_input"] = "2025〜1990"
+        st.session_state["_next_year_input"] = "2025〜1990"
         st.rerun()
 
     if q_col3.button("すべて選択", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = True
-        if "year_text_input" in st.session_state:
-            del st.session_state["year_text_input"]
-        st.session_state["year_text_input"] = "2025〜1965"
+        st.session_state["_next_year_input"] = "2025〜1965"
         st.rerun()
         
     if q_col4.button("すべてクリア", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = False
-        if "year_text_input" in st.session_state:
-            del st.session_state["year_text_input"]
-        st.session_state["year_text_input"] = ""
+        st.session_state["_next_year_input"] = ""
+        st.rerun()
+
+    # 次の描画時にテキストインプットの値を上書きする処理
+    if "_next_year_input" in st.session_state:
+        st.session_state.year_text_input = st.session_state.pop("_next_year_input")
         st.rerun()
 
     st.markdown("")
@@ -593,18 +570,25 @@ else:
             if not lottery["players"]:
                 st.warning("⚠️ この年のデータが取得できませんでした。別のボタンで引き直してください。")
             else:
-                st.subheader("📋 指名候補選手一覧（5項目抽出）")
+                st.subheader("📋 指名候補選手一覧")
                 display_players = [
                     {
                         "順位": p["rank_str"], 
                         "選手名": p["name"], 
                         "守備": p["pos"], 
-                        "投打": p["pitch_bat"], 
                         "区分": p["status"]
                     } for p in lottery["players"]
                 ]
                 players_df = pd.DataFrame(display_players)
-                st.dataframe(players_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
+                
+                def highlight_special_status(row):
+                    status = lottery["players"][row.name]["status"]
+                    if status != "入団":
+                        return ['color: #888888; background-color: #f9f9f9'] * len(row)
+                    return [''] * len(row)
+
+                styled_df = players_df.style.apply(highlight_special_status, axis=1)
+                st.dataframe(styled_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
                 
                 st.subheader("✍️ 選手を指名して役割を決定する")
                 role_type = st.radio("選手タイプを選択してください", ["野手", "投手"], horizontal=True)
@@ -615,7 +599,7 @@ else:
                 current_closer_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "抑え")
                 
                 with st.form("select_form"):
-                    player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['pitch_bat']} / {p['status']})": p for p in lottery["players"]}
+                    player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['status']})": p for p in lottery["players"]}
                     selected_key = st.selectbox("指名する選手を選択", options=list(player_options.keys()))
                     
                     assigned_bat_role = ""
