@@ -282,12 +282,9 @@ if not st.session_state.game_started:
 
     st.markdown("---")
     
-    c_b1, c_b2 = st.columns(2)
-    with c_b1:
-        st.markdown("野手人数")
-        num_starting_batters = 9
-    with c_b1:
-        num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
+   st.markdown("### ⚾ 野手人数設定")
+    num_starting_batters = 9
+    num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
 
     total_batters = num_starting_batters + num_sub_batters
     total_required_drafts = num_starting + num_relief + num_closer + total_batters
