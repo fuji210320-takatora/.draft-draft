@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import pandas as pd
-import re
 import requests
 from bs4 import BeautifulSoup
 
@@ -37,154 +36,134 @@ st.markdown("""
 
 TEAMS_LIST = [
     "読売ジャイアンツ", "阪神タイガース", "中日ドラゴンズ",
-    "横浜DeNAベイスターズ", "広島東洋カープ", "東京ヤクルトスワローズ",
-    "オリックス・バファローズ", "千葉ロッテマリーンズ",
-    "福岡ソフトバンクホークス", "東北楽天ゴールデンイーグルス",
-    "埼玉西武ライオンズ", "北海道日本ハムファイターズ",
-    "大阪近鉄バファローズ", "オリックス・ブルーウェーブ"
+    "東京ヤクルトスワローズ", "広島東洋カープ",
+    "横浜DeNAベイスターズ", "埼玉西武ライオンズ",
+    "福岡ソフトバンクホークス", "北海道日本ハムファイターズ",
+    "千葉ロッテマリーンズ", "オリックス・バファローズ",
+    "大阪近鉄バファローズ", "東北楽天ゴールデンイーグルス"
 ]
 
-def get_team_code_and_name(team_name, year):
-    """年度に応じたURLコードと正式な球団名を取得する関数"""
-    if team_name == "東北楽天ゴールデンイーグルス" and year < 2004:
-        return None, None
-
-    if team_name == "大阪近鉄バファローズ":
-        if 2001 <= year <= 2003:
-            return "bu", "大阪近鉄バファローズ"
+# =====================================================================
+# 2. 略称を優先・主体とした変遷マッピング関数
+# =====================================================================
+def get_draft_tokyo_team_names(team_name, year):
+    if "巨人" in team_name or "読売" in team_name:
+        return ["読売", "巨人", "読売ジャイアンツ"]
+    elif "阪神" in team_name:
+        return ["阪神", "阪神タイガース"]
+    elif "中日" in team_name:
+        return ["中日", "中日ドラゴンズ"]
+    elif "ヤクルト" in team_name or "サンケイ" in team_name or "アトムズ" in team_name:
+        if year == 1965:
+            return ["サンケイ", "サンケイスワローズ"]
+        elif 1966 <= year <= 1968:
+            return ["サンケイ", "サンケイアトムズ"]
+        elif year == 1969:
+            return ["アトムズ"]
+        elif 1970 <= year <= 1973:
+            return ["ヤクルト", "ヤクルトアトムズ"]
+        elif 1974 <= year <= 2005:
+            return ["ヤクルト", "ヤクルトスワローズ"]
+        elif 2006 <= year <= 2025:
+            return ["ヤクルト", "東京ヤクルトスワローズ"]
+    elif "広島" in team_name:
+        if 1965 <= year <= 1967:
+            return ["広島", "広島カープ"]
         else:
-            return None, None
-
-    if team_name == "オリックス・ブルーウェーブ":
-        if year <= 2003:
-            return "bw", "オリックス・ブルーウェーブ"
+            return ["広島", "広島東洋カープ"]
+    elif "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name:
+        if 1965 <= year <= 1978:
+            return ["大洋", "大洋ホエールズ"]
+        elif 1979 <= year <= 1991:
+            return ["大洋", "横浜大洋ホエールズ"]
+        elif 1992 <= year <= 2011:
+            return ["横浜", "横浜ベイスターズ"]
         else:
-            return None, None
-
-    if team_name == "オリックス・バファローズ":
-        if year <= 2003:
-            return None, None
-        elif year == 2004:
-            return "bs", "オリックス・バファローズ"
-        elif 2005 <= year <= 2018:
-            return "bs", "オリックス・バファローズ"
+            return ["DeNA", "横浜DeNAベイスターズ"]
+    elif "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name:
+        if 1965 <= year <= 1971:
+            return ["西鉄", "西鉄ライオンズ"]
+        elif 1972 <= year <= 1976:
+            return ["太平洋", "太平洋クラブライオンズ"]
+        elif 1977 <= year <= 1978:
+            return ["クラウン", "クラウンライターライオンズ"]
+        elif 1979 <= year <= 2007:
+            return ["西武", "西武ライオンズ"]
         else:
-            return "b", "オリックス・バファローズ"
+            return ["西武", "埼玉西武ライオンズ"]
+    elif "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name:
+        if 1965 <= year <= 1987:
+            return ["南海", "南海ホークス"]
+        elif 1988 <= year <= 2003:
+            return ["ダイエー", "福岡ダイエーホークス"]
+        else:
+            return ["ソフトバンク", "福岡ソフトバンクホークス"]
+    elif "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name:
+        if 1965 <= year <= 1972:
+            return ["東映", "東映フライヤーズ"]
+        elif 1973 <= year <= 2002:
+            return ["日本ハム", "日本ハムファイターズ"]
+        else:
+            return ["日本ハム", "北海道日本ハムファイターズ"]
+    elif "ロッテ" in team_name or ("東京" in team_name and year <= 1968):
+        if 1965 <= year <= 1968:
+            return ["東京", "東京オリオンズ"]
+        elif 1969 <= year <= 1990:
+            return ["ロッテ", "ロッテオリオンズ"]
+        else:
+            return ["ロッテ", "千葉ロッテマリーンズ"]
+    elif "近鉄" in team_name:
+        if 1965 <= year <= 1998:
+            return ["近鉄", "近鉄バファローズ"]
+        elif 1999 <= year <= 2003:
+            return ["近鉄", "大阪近鉄バファローズ"]
+        else:
+            return None
+    elif "オリックス" in team_name or "阪急" in team_name:
+        if 1965 <= year <= 1987:
+            return ["阪急", "阪急ブレーブス"]
+        elif 1988 <= year <= 1990:
+            return ["オリックス", "オリックス・ブレーブス"]
+        elif 1991 <= year <= 2003:
+            return ["オリックス", "オリックス・ブルーウェーブ"]
+        else:
+            return ["オリックス", "オリックスバファローズ"]
+    elif "楽天" in team_name:
+        if year < 2004:
+            return None
+        return ["楽天", "東北楽天ゴールデンイーグルス"]
 
-    if team_name == "横浜DeNAベイスターズ":
-        return ("yb", "横浜ベイスターズ") if year <= 2011 else ("db", "横浜DeNAベイスターズ")
-
-    if team_name == "福岡ソフトバンクホークス":
-        actual_name = "福岡ダイエーホークス" if year <= 2004 else "福岡ソフトバンクホークス"
-        return "h", actual_name
-
-    if team_name == "埼玉西武ライオンズ":
-        actual_name = "西武ライオンズ" if year <= 2007 else "埼玉西武ライオンズ"
-        return "l", actual_name
-
-    if team_name == "東京ヤクルトスワローズ":
-        actual_name = "ヤクルトスワローズ" if year <= 2005 else "東京ヤクルトスワローズ"
-        return "s", actual_name
-
-    if team_name == "北海道日本ハムファイターズ":
-        actual_name = "日本ハムファイターズ" if year <= 2003 else "北海道日本ハムファイターズ"
-        return "f", actual_name
-
-    codes = {
-        "読売ジャイアンツ": "g", "阪神タイガース": "t", "中日ドラゴンズ": "d",
-        "広島東洋カープ": "c", "千葉ロッテマリーンズ": "m",
-        "福岡ソフトバンクホークス": "h", "東北楽天ゴールデンイーグルス": "e",
-        "埼玉西武ライオンズ": "l", "北海道日本ハムファイターズ": "f",
-    }
-    return codes.get(team_name, "t"), team_name
+    return [team_name]
 
 def get_short_team_name(team_name, year):
-    """球団名の略称を取得する関数"""
-    if team_name == "大阪近鉄バファローズ":
-        return "近鉄"
-    if team_name == "オリックス・ブルーウェーブ":
-        return "オリックス"
-    if team_name == "北海道日本ハムファイターズ" and year <= 2003:
-        return "日本ハム"
-    if team_name == "横浜DeNAベイスターズ":
-        return "横浜" if year <= 2011 else "DeNA"
-    if team_name == "福岡ソフトバンクホークス" and year <= 2004:
-        return "ダイエー"
-    if team_name == "埼玉西武ライオンズ" and year <= 2007:
-        return "西武"
-    if team_name == "東京ヤクルトスワローズ" and year <= 2005:
-        return "ヤクルト"
-
-    short_names = {
-        "読売ジャイアンツ": "巨人", "阪神タイガース": "阪神", "中日ドラゴンズ": "中日",
-        "横浜DeNAベイスターズ": "DeNA", "広島東洋カープ": "広島", "東京ヤクルトスワローズ": "ヤクルト",
-        "オリックス・バファローズ": "オリックス", "千葉ロッテマリーンズ": "ロッテ",
-        "福岡ソフトバンクホークス": "ソフトバンク", "東北楽天ゴールデンイーグルス": "楽天",
-        "埼玉西武ライオンズ": "西武", "北海道日本ハムファイターズ": "日本ハム",
-    }
-    return short_names.get(team_name, team_name)
+    if "阪神" in team_name: return "阪神"
+    if "巨人" in team_name or "読売" in team_name: return "読売"
+    if "中日" in team_name: return "中日"
+    if "ヤクルト" in team_name or "サンケイ" in team_name or "アトムズ" in team_name: return "ヤクルト"
+    if "広島" in team_name: return "広島"
+    if "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name: return "DeNA"
+    if "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name: return "西武"
+    if "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name: return "ソフトバンク"
+    if "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name: return "日本ハム"
+    if "ロッテ" in team_name or "東京" in team_name: return "ロッテ"
+    if "オリックス" in team_name or "阪急" in team_name: return "オリックス"
+    if "近鉄" in team_name: return "近鉄"
+    if "楽天" in team_name: return "楽天"
+    return team_name
 
 # =====================================================================
-# 2. テキスト分解関数
-# =====================================================================
-def parse_player_data(cols, row_text, current_category):
-    rank_text = ""
-    name = ""
-    age = ""
-    pos = "---"
-    
-    for col_val in cols:
-        if any(kw in col_val for kw in ["位", "巡", "枠", "自由", "選択権なし", "希望"]):
-            rank_text = col_val
-            break
-            
-    if not rank_text:
-        if current_category in ["希望入団枠", "自由獲得選手"]:
-            rank_text = current_category
-        elif "希望入団枠" in row_text:
-            rank_text = "希望入団枠"
-        elif "自由獲得選手" in row_text:
-            rank_text = "自由獲得選手"
-
-    if "選択権なし" in row_text:
-        return rank_text if rank_text else "選択権なし", "（選択権なし）", "", "---"
-
-    full_target_text = "".join(cols)
-    
-    age_match = re.search(r'[（\(](\d+)[）\)]', full_target_text)
-    if age_match:
-        age = f"（{age_match.group(1)}）"
-
-    pos_match = re.search(r'(投手|捕手|内野手|外野手|投\s*手|捕\s*手|内野\s*手|外野\s*手)', full_target_text)
-    if pos_match:
-        raw_p = pos_match.group(1).replace(" ", "")
-        pos = raw_p
-
-    clean_text = full_target_text
-    if rank_text and rank_text != "不明":
-        clean_text = clean_text.replace(rank_text, "")
-    if age_match:
-        clean_text = clean_text.split(age_match.group(0))[0]
-    if pos_match:
-        clean_text = clean_text.split(pos_match.group(0))[0]
-        
-    name = clean_text.strip()
-    return rank_text, name if name else "（不明）", age, pos
-
-# =====================================================================
-# 3. DOM順走査関数
+# 3. draft.tokyo スクレイピング関数
 # =====================================================================
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_npb_draft_data(team_name, year):
-    t_code, actual_team_name = get_team_code_and_name(team_name, year)
-    if not t_code:
+def fetch_draft_tokyo_data(team_name, year):
+    target_names = get_draft_tokyo_team_names(team_name, year)
+    if not target_names:
         return []
 
-    url = f"https://draft.npb.jp/draft/{year}/draftlist_{t_code}.html"
+    url = f"https://draft.tokyo/draft/{year}/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    players = []
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
@@ -193,62 +172,76 @@ def fetch_npb_draft_data(team_name, year):
             return []
             
         soup = BeautifulSoup(response.text, "html.parser")
-        current_category = None
-        content_area = soup.find("div", id="content") or soup.body
-        if not content_area:
-            content_area = soup
-            
-        elements = content_area.find_all(["h2", "h3", "h4", "div", "tr"])
+        first_table = soup.find("table")
         
-        for el in elements:
-            el_text = el.get_text(strip=True)
-            if not el_text:
+        target_table = None
+        for element in soup.find_all(["h2", "h3", "h4", "div", "strong", "th"]):
+            el_text = element.get_text(strip=True)
+            if any(name in el_text for name in target_names):
+                is_before_first_table = False
+                if first_table:
+                    if element.find_all_previous(string=True) and first_table in element.find_all_next():
+                        is_before_first_table = True
+
+                if is_before_first_table:
+                    continue
+                
+                next_node = element.find_next("table")
+                if next_node:
+                    target_table = next_node
+                    break
+
+        if not target_table:
+            all_tables = soup.find_all("table")
+            for t in all_tables:
+                prev_text = t.find_previous(["h2", "h3", "h4", "th", "div", "p"])
+                p_text = prev_text.get_text(strip=True) if prev_text else ""
+                if prev_text and any(name in p_text for name in target_names):
+                    target_table = t
+                    break
+
+        if not target_table:
+            return []
+
+        players = []
+        rows = target_table.find_all("tr")
+        
+        for row in rows:
+            cols = [col.get_text(strip=True) for col in row.find_all(["th", "td"])]
+            if not cols or "順位" in cols[0] or "選手名" in cols:
                 continue
                 
-            if el.name in ["h2", "h3", "h4"] or "選択会議" in el_text:
-                if "育成選手選択会議" in el_text or "育成" in el_text:
-                    current_category = "育成選手"
-                elif "新人選手選択会議" in el_text and "育成" not in el_text:
-                    current_category = "支配下選手"
-                elif "高校生" in el_text:
-                    current_category = "高校生"
-                elif "大学生・社会人" in el_text or "大学生" in el_text or "社会人" in el_text:
-                    current_category = "大学生・社会人ほか"
-                elif "自由獲得" in el_text or "希望入団枠" in el_text:
-                    current_category = "希望入団枠" if "希望" in el_text else "自由獲得選手"
-                continue
-
-            if el.name == "tr":
-                row_text = el_text
-                if "育成" in row_text:
-                    current_category = "育成選手"
-                elif "自由獲得枠" in row_text:
-                    current_category = "自由獲得選手"
-                elif "希望入団枠" in row_text:
-                    current_category = "希望入団枠"
-                elif "高校生" in row_text:
-                    current_category = "高校生"
-                elif "大学生" in row_text or "社会人" in row_text:
-                    current_category = "大学生・社会人ほか"
-
-                is_header_or_note = "選手名" in row_text or "選択選手" in row_text or row_text.startswith("※")
-                cols = [c.get_text(strip=True) for c in el.find_all(["th", "td"]) if c.get_text(strip=True)]
+            if len(cols) >= 2:
+                rank = cols[0]
+                name = cols[1]
+                pos = cols[2] if len(cols) > 2 else "---"
                 
-                if len(cols) >= 1 and not is_header_or_note:
-                    rank_text, name, age, pos = parse_player_data(cols, row_text, current_category)
-                    if name and "選手名" not in name:
-                        cat = "育成" if (current_category == "育成選手" or "育成" in rank_text) else "支配下"
-                        display_rank = f"[{current_category}] {rank_text}" if (current_category in ["高校生", "大学生・社会人ほか"] and current_category not in rank_text) else rank_text
-                        
-                        player_entry = {"rank_str": display_rank, "name": name, "pos": pos, "category": cat}
-                        if player_entry not in players:
-                            players.append(player_entry)
-                            
-        if not players:
-            players = [
-                {"rank_str": "1位", "name": f"{actual_team_name}テスト選手1", "pos": "投手", "category": "支配下"},
-                {"rank_str": "育成1位", "name": f"{actual_team_name}テスト育成1", "pos": "捕手", "category": "育成"},
-            ]
+                pitch_bat = "不明"
+                for c in cols:
+                    if c in ["右右", "左右", "左左", "右左"]:
+                        pitch_bat = c
+                        break
+                
+                status = "入団"
+                row_full_text = row.get_text()
+                if "拒否" in name or "拒否" in row_full_text:
+                    status = "入団拒否"
+                elif "×" in name or "外れ" in name or "交渉権なし" in name:
+                    status = "その他"
+
+                cat = "育成" if "育成" in rank else "支配下"
+                
+                player_entry = {
+                    "rank_str": rank,
+                    "name": name,
+                    "pos": pos if pos in ["投手", "捕手", "内野手", "外野手"] else "---",
+                    "pitch_bat": pitch_bat,
+                    "status": status,
+                    "category": cat
+                }
+                if player_entry not in players:
+                    players.append(player_entry)
+                    
         return players
     except Exception:
         return []
@@ -269,10 +262,18 @@ if "skip_count" not in st.session_state:
 if "used_lotteries" not in st.session_state:
     st.session_state.used_lotteries = set()
 
-all_years = list(range(2025, 2000, -1))
+all_years = list(range(2025, 1964, -1)) # 2025年〜1964年
+
+# 初期状態で全年にチェックを入れる
+for y in all_years:
+    if f"setup_year_{y}" not in st.session_state:
+        st.session_state[f"setup_year_{y}"] = True
+
+if "year_text_input" not in st.session_state:
+    st.session_state.year_text_input = "2025〜1965"
 
 # =====================================================================
-# 5. スタート前画面（未開始の場合）
+# 5. スタート前画面
 # =====================================================================
 if not st.session_state.game_started:
     st.title("⚙️ 設定画面")
@@ -302,58 +303,115 @@ if not st.session_state.game_started:
     skip_limit_option = st.selectbox("スキップ上限回数を選択", options=["無制限"] + [str(i) for i in range(21)], index=4)
     max_skips_val = float("inf") if skip_limit_option == "無制限" else int(skip_limit_option)
 
-    # 重複なし設定のチェックボックス
-    no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない（パス回数も含む）", value=True)
+    no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない", value=True)
 
     st.markdown("---")
-    st.markdown("### 📅 対象年度の設定")
-    col_btn1, col_btn2 = st.columns(2)
-    for y in all_years:
-        if f"setup_year_{y}" not in st.session_state:
-            st.session_state[f"setup_year_{y}"] = True
+    st.markdown("### 📅 対象年度の設定 (1965〜2025)")
+    st.markdown("下のチェックボックスを直接操作するか、テキスト入力欄に範囲や飛び飛びの年で直接入力できます。")
 
-    if col_btn1.button("すべて選択", use_container_width=True):
+    # テキスト入力欄とチェックボックスの連動処理
+    def on_text_change():
+        val = st.session_state.year_text_input
+        parsed_years = set()
+        parts = val.replace("～", "~").replace("-", "~").split(",")
+        for part in parts:
+            part = part.strip()
+            if "~" in part:
+                try:
+                    start_s, end_s = part.split("~")
+                    s, e = int(start_s.strip()), int(end_s.strip())
+                    for y in range(min(s, e), max(s, e) + 1):
+                        if 1965 <= y <= 2025:
+                            parsed_years.add(y)
+                except:
+                    pass
+            else:
+                try:
+                    y = int(part)
+                    if 1965 <= y <= 2025:
+                        parsed_years.add(y)
+                except:
+                    pass
+        
+        if parsed_years:
+            for y in all_years:
+                st.session_state[f"setup_year_{y}"] = (y in parsed_years)
+
+    st.text_input(
+        "対象年度を直接入力 (例: `2010〜2020` または `2025, 2020, 2010〜2015`)",
+        key="year_text_input",
+        on_change=on_text_change
+    )
+
+    # クイック選択ボタンの配置
+    q_col1, q_col2, q_col3, q_col4 = st.columns(4)
+    
+    if q_col1.button("2000年以降", use_container_width=True):
+        for y in all_years:
+            st.session_state[f"setup_year_{y}"] = (2000 <= y <= 2025)
+        if "year_text_input" in st.session_state:
+            del st.session_state["year_text_input"]
+        st.session_state["year_text_input"] = "2025〜2000"
+        st.rerun()
+
+    if q_col2.button("1990年以降", use_container_width=True):
+        for y in all_years:
+            st.session_state[f"setup_year_{y}"] = (1990 <= y <= 2025)
+        if "year_text_input" in st.session_state:
+            del st.session_state["year_text_input"]
+        st.session_state["year_text_input"] = "2025〜1990"
+        st.rerun()
+
+    if q_col3.button("すべて選択", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = True
+        if "year_text_input" in st.session_state:
+            del st.session_state["year_text_input"]
+        st.session_state["year_text_input"] = "2025〜1965"
         st.rerun()
-    if col_btn2.button("すべてクリア", use_container_width=True):
+        
+    if q_col4.button("すべてクリア", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = False
+        if "year_text_input" in st.session_state:
+            del st.session_state["year_text_input"]
+        st.session_state["year_text_input"] = ""
         st.rerun()
 
     st.markdown("")
-    num_cols = 4
+    num_cols = 6
     rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
+    
     for row_years in rows:
         cols_grid = st.columns(num_cols)
         for i, y in enumerate(row_years):
             with cols_grid[i]:
-                st.checkbox(f"{y}年", value=st.session_state[f"setup_year_{y}"], key=f"setup_year_{y}")
+                st.checkbox(f"{y}", value=st.session_state.get(f"setup_year_{y}", True), key=f"setup_year_{y}")
 
+    active_temp_years = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
+    
     st.markdown("---")
 
-    selected_temp_years = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
     total_possible_combinations = 0
-    for y in selected_temp_years:
+    for y in active_temp_years:
         for t in TEAMS_LIST:
-            code, _ = get_team_code_and_name(t, y)
-            if code is not None:
+            if get_draft_tokyo_team_names(t, y) is not None:
                 total_possible_combinations += 1
 
     max_possible_trials = total_required_drafts if max_skips_val == float("inf") else (total_required_drafts + max_skips_val)
 
-    st.info(f"📊 選択された年度の利用可能な総組み合わせ数: **約 {total_possible_combinations} 回** (選択年数: {len(selected_temp_years)}年)")
+    st.info(f"📊 選択された年度の利用可能な総組み合わせ数: **約 {total_possible_combinations} 回** (選択年数: {len(active_temp_years)}年)")
 
     can_start = True
-    if no_duplicate_lottery and max_possible_trials > total_possible_combinations:
-        if max_skips_val == float("inf"):
-            st.error(f"⚠️ エラー: 「重複なし」設定が有効ですが、チームに必要な人数（{total_required_drafts}人）が、選択された年度で引ける最大のドラフト組み合わせ数（{total_possible_combinations}回）を超えています！")
-        else:
-            st.error(f"⚠️ エラー: 「重複なし」設定有効時、必要人数（{total_required_drafts}人）＋スキップ上限（{max_skips_val}回）の合計（{max_possible_trials}回）が、選択された年度の最大組み合わせ数（{total_possible_combinations}回）を超えています！")
+    if len(active_temp_years) == 0:
+        st.error("⚠️ エラー: 対象年度が1つも選択されていません。")
+        can_start = False
+    elif no_duplicate_lottery and max_possible_trials > total_possible_combinations:
+        st.error(f"⚠️ エラー: 必要人数＋スキップ上限の合計が、選択された年度の最大組み合わせ数を超えています！")
         can_start = False
 
     if st.button("🚀 この設定でゲームスタート！", type="primary", use_container_width=True, disabled=not can_start):
-        st.session_state.selected_years = selected_temp_years
+        st.session_state.selected_years = active_temp_years
         st.session_state.max_skips = max_skips_val
         st.session_state.no_duplicate_lottery = no_duplicate_lottery
         st.session_state.config_num_starting = num_starting
@@ -371,7 +429,7 @@ if not st.session_state.game_started:
         st.rerun()
 
 # =====================================================================
-# 6. メインゲーム画面（スタート後の場合）
+# 6. メインゲーム画面
 # =====================================================================
 else:
     max_skips = st.session_state.max_skips
@@ -391,7 +449,7 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    st.title("⚾ ドラフト×ドラフト")
+    st.title("⚾ ドラフト×ドラフト (略称優先・draft.tokyo 版)")
     st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
     col_sub, col_main = st.columns([1, 1.2])
@@ -399,7 +457,7 @@ else:
     with col_sub:
         st.subheader("🏟️ チーム編成ボード")
         
-        # --- 野手ボード ---
+        # 野手ボード
         st.markdown(f"### 【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】")
         batter_template_roles = [f"{i}番" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
@@ -416,7 +474,7 @@ else:
                 batter_display_rows.append({"打順/役割": target_role, "守備位置": "---", "選手名": "---", "出自": "---"})
         st.dataframe(pd.DataFrame(batter_display_rows), use_container_width=True, hide_index=True, height=38 + len(batter_display_rows) * 35)
 
-        # --- 投手ボード ---
+        # 投手ボード
         total_pitcher_slots = num_starting + num_relief + num_closer
         st.markdown(f"### 【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】")
         pitcher_template_roles = []
@@ -456,15 +514,12 @@ else:
         else:
             st.write(f"スキップ残回数: **無制限 (現在 {st.session_state.skip_count} 回使用)**")
 
-        # プールの生成
         all_possible_pool = []
         for y in selected_years:
             for t in TEAMS_LIST:
-                code, _ = get_team_code_and_name(t, y)
-                if code is not None:
+                if get_draft_tokyo_team_names(t, y) is not None:
                     all_possible_pool.append((t, y))
 
-        # 重複なし設定が有効な場合のみ、使用済みを除外する
         if no_duplicate_lottery:
             active_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries]
         else:
@@ -476,16 +531,17 @@ else:
                 st.session_state.game_started = False
                 st.rerun()
         elif no_duplicate_lottery and not active_pool:
-            st.warning("⚠️ 選択された年度内のすべての球団ドラフトをすでに引き切りました（または枯渇しました）！設定を見直してください。")
+            st.warning("⚠️ 選択された年度内のすべての球団ドラフトをすでに引き切りました！")
         else:
             c1, c2 = st.columns(2)
             with c1:
                 is_lottery_disabled = (st.session_state.current_lottery is not None)
                 if st.button("🎲 抽選する（球団 ＆ 年）", type="primary", disabled=is_lottery_disabled, use_container_width=True):
                     chosen_team, chosen_year = random.choice(active_pool)
-                    t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                    names = get_draft_tokyo_team_names(chosen_team, chosen_year)
+                    actual_team_name = names[0] if names else chosen_team
                     
-                    fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
+                    fetched_players = fetch_draft_tokyo_data(chosen_team, chosen_year)
                     
                     st.session_state.current_lottery = {
                         "team": chosen_team,
@@ -514,9 +570,10 @@ else:
                         if not no_duplicate_lottery or updated_active_pool:
                             st.session_state.skip_count += 1
                             chosen_team, chosen_year = random.choice(updated_active_pool)
-                            t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                            names = get_draft_tokyo_team_names(chosen_team, chosen_year)
+                            actual_team_name = names[0] if names else chosen_team
                             
-                            fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
+                            fetched_players = fetch_draft_tokyo_data(chosen_team, chosen_year)
                                 
                             st.session_state.current_lottery = {
                                 "team": chosen_team,
@@ -531,13 +588,21 @@ else:
         if st.session_state.current_lottery:
             lottery = st.session_state.current_lottery
             
-            st.info(f"✨ 抽選結果： **{lottery['year']}** の **{lottery['actual_team_name']}** が選ばれました！")
+            st.info(f"✨ 抽選結果： **{lottery['year']}年** の **{lottery['actual_team_name']}** が選ばれました！")
             
             if not lottery["players"]:
-                st.warning("⚠️ この年のデータが見つかりませんでした。別のボタンで引き直してください。")
+                st.warning("⚠️ この年のデータが取得できませんでした。別のボタンで引き直してください。")
             else:
-                st.subheader("📋 指名候補選手一覧")
-                display_players = [{"順位": p["rank_str"], "区分": p["category"], "選手名": p["name"], "ポジション": p["pos"]} for p in lottery["players"]]
+                st.subheader("📋 指名候補選手一覧（5項目抽出）")
+                display_players = [
+                    {
+                        "順位": p["rank_str"], 
+                        "選手名": p["name"], 
+                        "守備": p["pos"], 
+                        "投打": p["pitch_bat"], 
+                        "区分": p["status"]
+                    } for p in lottery["players"]
+                ]
                 players_df = pd.DataFrame(display_players)
                 st.dataframe(players_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
                 
@@ -550,7 +615,7 @@ else:
                 current_closer_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "抑え")
                 
                 with st.form("select_form"):
-                    player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']})": p for p in lottery["players"]}
+                    player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['pitch_bat']} / {p['status']})": p for p in lottery["players"]}
                     selected_key = st.selectbox("指名する選手を選択", options=list(player_options.keys()))
                     
                     assigned_bat_role = ""
