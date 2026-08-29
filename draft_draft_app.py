@@ -282,7 +282,7 @@ if not st.session_state.game_started:
 
     st.markdown("---")
     
-   st.markdown("### ⚾ 野手人数設定")
+    st.markdown("### ⚾ 野手人数設定")
     num_starting_batters = 9
     num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
 
