@@ -298,9 +298,12 @@ if not st.session_state.game_started:
     st.success(f"💡 設定されたチームの総人数（必要指名数）: **{total_required_drafts} 人**")
 
     st.markdown("---")
-    st.markdown("### 🔄 スキップ回数制限")
+    st.markdown("### 🔄 スキップ回数制限 ＆ 抽選設定")
     skip_limit_option = st.selectbox("スキップ上限回数を選択", options=["無制限"] + [str(i) for i in range(21)], index=4)
     max_skips_val = float("inf") if skip_limit_option == "無制限" else int(skip_limit_option)
+
+    # 重複なし設定のチェックボックス
+    no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない（パス回数も含む）", value=True)
 
     st.markdown("---")
     st.markdown("### 📅 対象年度の設定")
@@ -337,23 +340,22 @@ if not st.session_state.game_started:
             if code is not None:
                 total_possible_combinations += 1
 
-    # パス回数（スキップ上限）を含めたトータル消費数と比較できるようにチェック
     max_possible_trials = total_required_drafts if max_skips_val == float("inf") else (total_required_drafts + max_skips_val)
 
     st.info(f"📊 選択された年度の利用可能な総組み合わせ数: **約 {total_possible_combinations} 回** (選択年数: {len(selected_temp_years)}年)")
 
-    if max_possible_trials > total_possible_combinations:
+    can_start = True
+    if no_duplicate_lottery and max_possible_trials > total_possible_combinations:
         if max_skips_val == float("inf"):
-            st.error(f"⚠️ エラー: チームに必要な人数（{total_required_drafts}人）が、選択された年度で引ける最大のドラフト組み合わせ数（{total_possible_combinations}回）を超えています！")
+            st.error(f"⚠️ エラー: 「重複なし」設定が有効ですが、チームに必要な人数（{total_required_drafts}人）が、選択された年度で引ける最大のドラフト組み合わせ数（{total_possible_combinations}回）を超えています！")
         else:
-            st.error(f"⚠️ エラー: 必要人数（{total_required_drafts}人）＋スキップ上限（{max_skips_val}回）の合計試行数（{max_possible_trials}回）が、選択された年度の最大組み合わせ数（{total_possible_combinations}回）を超えています！年度を増やすか、設定を調整してください。")
+            st.error(f"⚠️ エラー: 「重複なし」設定有効時、必要人数（{total_required_drafts}人）＋スキップ上限（{max_skips_val}回）の合計（{max_possible_trials}回）が、選択された年度の最大組み合わせ数（{total_possible_combinations}回）を超えています！")
         can_start = False
-    else:
-        can_start = True
 
     if st.button("🚀 この設定でゲームスタート！", type="primary", use_container_width=True, disabled=not can_start):
         st.session_state.selected_years = selected_temp_years
         st.session_state.max_skips = max_skips_val
+        st.session_state.no_duplicate_lottery = no_duplicate_lottery
         st.session_state.config_num_starting = num_starting
         st.session_state.config_num_relief = num_relief
         st.session_state.config_num_closer = num_closer
@@ -375,6 +377,7 @@ else:
     max_skips = st.session_state.max_skips
     selected_years = st.session_state.selected_years
     max_drafts = st.session_state.max_drafts
+    no_duplicate_lottery = st.session_state.no_duplicate_lottery
 
     num_starting = st.session_state.config_num_starting
     num_relief = st.session_state.config_num_relief
@@ -453,7 +456,7 @@ else:
         else:
             st.write(f"スキップ残回数: **無制限 (現在 {st.session_state.skip_count} 回使用)**")
 
-        # まだ一度も抽選・スキップされていない（未登場の）「チーム×年」のプール
+        # プールの生成
         all_possible_pool = []
         for y in selected_years:
             for t in TEAMS_LIST:
@@ -461,19 +464,25 @@ else:
                 if code is not None:
                     all_possible_pool.append((t, y))
 
-        unplayed_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries]
+        # 重複なし設定が有効な場合のみ、使用済みを除外する
+        if no_duplicate_lottery:
+            active_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries]
+        else:
+            active_pool = all_possible_pool
 
         if st.session_state.draft_count >= max_drafts:
             st.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
             if st.button("もう一度最初から設定し直す", use_container_width=True):
                 st.session_state.game_started = False
                 st.rerun()
+        elif no_duplicate_lottery and not active_pool:
+            st.warning("⚠️ 選択された年度内のすべての球団ドラフトをすでに引き切りました（または枯渇しました）！設定を見直してください。")
         else:
             c1, c2 = st.columns(2)
             with c1:
                 is_lottery_disabled = (st.session_state.current_lottery is not None)
                 if st.button("🎲 抽選する（球団 ＆ 年）", type="primary", disabled=is_lottery_disabled, use_container_width=True):
-                    chosen_team, chosen_year = random.choice(unplayed_pool)
+                    chosen_team, chosen_year = random.choice(active_pool)
                     t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
                     
                     fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
@@ -484,29 +493,27 @@ else:
                         "year": chosen_year,
                         "players": fetched_players
                     }
-                    # 引いた組み合わせを使用済み（二度と出ない）に登録
-                    st.session_state.used_lotteries.add((chosen_team, chosen_year))
+                    if no_duplicate_lottery:
+                        st.session_state.used_lotteries.add((chosen_team, chosen_year))
                     st.rerun()
             with c2:
-                is_skip_disabled = (st.session_state.current_lottery is None) or (st.session_state.skip_count >= max_skips) or (len(unplayed_pool) == 0)
+                is_skip_disabled = (st.session_state.current_lottery is None) or (st.session_state.skip_count >= max_skips) or (no_duplicate_lottery and len(active_pool) == 0)
                 skip_button_label = "🔄 スキップ（引き直す）"
                 if st.session_state.skip_count >= max_skips:
                     skip_button_label = "🚫 スキップ上限に達しました"
 
                 if st.button(skip_button_label, disabled=is_skip_disabled, use_container_width=True):
-                    if st.session_state.skip_count < max_skips and unplayed_pool:
-                        # まず現在画面に出ているもの（または直前まで保留していたもの）も確実に使用済みに含める
-                        if st.session_state.current_lottery:
+                    if st.session_state.skip_count < max_skips and (not no_duplicate_lottery or active_pool):
+                        if no_duplicate_lottery and st.session_state.current_lottery:
                             current_t = st.session_state.current_lottery["team"]
                             current_y = st.session_state.current_lottery["year"]
                             st.session_state.used_lotteries.add((current_t, current_y))
 
-                        # 再計算して、まだ出ていないプールから新しく引く
-                        updated_unplayed_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries]
+                        updated_active_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries] if no_duplicate_lottery else all_possible_pool
                         
-                        if updated_unplayed_pool:
+                        if not no_duplicate_lottery or updated_active_pool:
                             st.session_state.skip_count += 1
-                            chosen_team, chosen_year = random.choice(updated_unplayed_pool)
+                            chosen_team, chosen_year = random.choice(updated_active_pool)
                             t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
                             
                             fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
@@ -517,8 +524,8 @@ else:
                                 "year": chosen_year,
                                 "players": fetched_players
                             }
-                            # スキップで新しく出現させた組み合わせも、当然「もう二度と当たらない」ように使用済みに追加
-                            st.session_state.used_lotteries.add((chosen_team, chosen_year))
+                            if no_duplicate_lottery:
+                                st.session_state.used_lotteries.add((chosen_team, chosen_year))
                             st.rerun()
 
         if st.session_state.current_lottery:
