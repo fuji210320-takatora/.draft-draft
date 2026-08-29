@@ -286,7 +286,7 @@ if not st.session_state.game_started:
     with c_b1:
         st.markdown("野手人数")
         num_starting_batters = 9
-    with c_b1:
+    with c_b2:
         num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
 
     total_batters = num_starting_batters + num_sub_batters
@@ -329,11 +329,15 @@ if not st.session_state.game_started:
 
     st.markdown("")
     
-    cols_grid = st.columns(4)
-    for i, y in enumerate(all_years):
-        col_idx = i % 4
-        with cols_grid[col_idx]:
-            st.checkbox(f"{y}年", value=st.session_state[f"setup_year_{y}"], key=f"setup_year_{y}")
+    # スマホ等の画面幅でも崩れないよう、4列グリッドを明示的に構築
+    num_cols = 4
+    rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
+    
+    for row_years in rows:
+        cols_grid = st.columns(num_cols)
+        for i, y in enumerate(row_years):
+            with cols_grid[i]:
+                st.checkbox(f"{y}年", value=st.session_state[f"setup_year_{y}"], key=f"setup_year_{y}")
 
     st.markdown("---")
     
@@ -371,7 +375,8 @@ else:
     num_closer = st.session_state.config_num_closer
     num_batters = st.session_state.config_num_batters
 
-    all_defensive_positions = ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者", "投手(二刀流)"]
+    # 守備ポジションから「投手(二刀流)」を削除
+    all_defensive_positions = ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者"]
 
     st.sidebar.title("📋 メニュー")
     if st.sidebar.button("⚙️ 設定を変更してやり直す", use_container_width=True):
@@ -575,7 +580,6 @@ else:
                         if current_batters_count >= num_batters:
                             st.warning("⚠️ 野手枠はすでに満員です！")
                         
-                        # 未使用の打順・役割のみ抽出
                         available_batter_roles = []
                         for i in range(1, 10):
                             role_name = f"{i}番"
@@ -590,7 +594,6 @@ else:
                                 
                         assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
                         
-                        # ★一度選ばれた守備ポジションを除外する処理
                         used_positions = [b["守備位置"] for b in st.session_state.my_team["batters"] if b["守備位置"] != "---"]
                         available_positions = [pos for pos in all_defensive_positions if pos not in used_positions]
                         
