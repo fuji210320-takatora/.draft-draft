@@ -583,8 +583,7 @@ else:
 
         if st.session_state.current_lottery:
             lottery = st.session_state.current_lottery
-            short_name = get_short_team_name(lottery['team'], lottery['year'])
-            st.info(f"✨ 抽選結果： **{lottery['year']}** の **{short_name} ({lottery['actual_team_name']})** が選ばれました！")
+            st.info(f"✨ 抽選結果： **{lottery['year']}** の **{lottery['actual_team_name']}** が選ばれました！")
             
             if not lottery["players"]:
                 st.warning("⚠️ この年のデータが見つかりませんでした。別のボタンで引き直してください。")
