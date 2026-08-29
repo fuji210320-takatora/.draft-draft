@@ -41,24 +41,64 @@ TEAMS_LIST = [
     "オリックス・バファローズ", "千葉ロッテマリーンズ",
     "福岡ソフトバンクホークス", "東北楽天ゴールデンイーグルス",
     "埼玉西武ライオンズ", "北海道日本ハムファイターズ",
+    "大阪近鉄バファローズ", "オリックス・ブルーウェーブ"
 ]
 
 def get_team_code_and_name(team_name, year):
     """年度に応じたURLコードと正式な球団名を取得する関数"""
+    # 楽天は2005年参入（2004年ドラフトから参加）なので、2004年未満は存在しない
+    if team_name == "東北楽天ゴールデンイーグルス" and year < 2004:
+        return None, None
+
+    # 近鉄は2001〜2003年限定
+    if team_name == "大阪近鉄バファローズ":
+        if 2001 <= year <= 2003:
+            return "bu", "大阪近鉄バファローズ"
+        else:
+            return None, None
+
+    # オリックス・ブルーウェーブは2003年以前
+    if team_name == "オリックス・ブルーウェーブ":
+        if year <= 2003:
+            return "bw", "オリックス・ブルーウェーブ"
+        else:
+            return None, None
+
+    # オリックス・バファローズ（2004年合併、2005年〜、2004年はBs統合）
+    if team_name == "オリックス・バファローズ":
+        if year <= 2003:
+            return None, None
+        elif year == 2004:
+            return "bs", "オリックス・バファローズ"
+        elif 2005 <= year <= 2018:
+            return "bs", "オリックス・バファローズ"
+        else:
+            return "b", "オリックス・バファローズ"
+
+    # 横浜DeNAベイスターズ
     if team_name == "横浜DeNAベイスターズ":
         return ("yb", "横浜ベイスターズ") if year <= 2011 else ("db", "横浜DeNAベイスターズ")
-    if team_name == "オリックス・バファローズ":
-        return ("bs", "オリックス・バファローズ") if year <= 2018 else ("b", "オリックス・バファローズ")
+
+    # ソフトバンク（2004年はダイエー）
     if team_name == "福岡ソフトバンクホークス" and year == 2004:
         return ("h", "福岡ダイエーホークス")
+
+    # 西武（2007年以前は西武ライオンズ）
     if team_name == "埼玉西武ライオンズ" and year <= 2007:
         return ("l", "西武ライオンズ")
+
+    # ヤクルト（2005年以前はヤクルトスワローズ）
     if team_name == "東京ヤクルトスワローズ" and year <= 2005:
         return ("s", "ヤクルトスワローズ")
 
+    # 日本ハム（2003年以前は日本ハムファイターズ、コードはfのまま）
+    if team_name == "北海道日本ハムファイターズ":
+        actual_name = "日本ハムファイターズ" if year <= 2003 else "北海道日本ハムファイターズ"
+        return "f", actual_name
+
     codes = {
         "読売ジャイアンツ": "g", "阪神タイガース": "t", "中日ドラゴンズ": "d",
-        "広島東洋カープ": "c", "東京ヤクルトスワローズ": "s", "千葉ロッテマリーンズ": "m",
+        "広島東洋カープ": "c", "千葉ロッテマリーンズ": "m",
         "福岡ソフトバンクホークス": "h", "東北楽天ゴールデンイーグルス": "e",
         "埼玉西武ライオンズ": "l", "北海道日本ハムファイターズ": "f",
     }
@@ -66,6 +106,13 @@ def get_team_code_and_name(team_name, year):
 
 def get_short_team_name(team_name, year):
     """球団名の略称を取得する関数"""
+    if team_name == "大阪近鉄バファローズ":
+        return "近鉄"
+    if team_name == "オリックス・ブルーウェーブ":
+        return "オリックス"
+    if team_name == "北海道日本ハムファイターズ" and year <= 2003:
+        return "日本ハム"
+
     if team_name == "横浜DeNAベイスターズ":
         return "横浜" if year <= 2011 else "DeNA"
     if team_name == "福岡ソフトバンクホークス" and year == 2004:
@@ -148,6 +195,9 @@ def parse_player_data(cols, row_text, current_category):
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_npb_draft_data(team_name, year):
     t_code, actual_team_name = get_team_code_and_name(team_name, year)
+    if not t_code:
+        return []
+
     url = f"https://draft.npb.jp/draft/{year}/draftlist_{t_code}.html"
     
     headers = {
@@ -259,7 +309,8 @@ if "draft_count" not in st.session_state:
 if "skip_count" not in st.session_state:
     st.session_state.skip_count = 0
 
-all_years = list(range(2025, 2003, -1))
+# 対象年度を2001年まで拡張
+all_years = list(range(2025, 2000, -1))
 
 # =====================================================================
 # 5. スタート前画面（未開始の場合）
@@ -282,6 +333,7 @@ if not st.session_state.game_started:
 
     st.markdown("---")
     
+    # 野手人数（左寄せ）
     st.markdown("### ⚾ 野手人数設定")
     num_starting_batters = 9
     num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
@@ -292,12 +344,12 @@ if not st.session_state.game_started:
 
     st.markdown("---")
 
-    # スキップ設定
+    # スキップ設定（デフォルトを3回 = index=4）
     st.markdown("### 🔄 スキップ回数制限")
     skip_limit_option = st.selectbox(
         "スキップ上限回数を選択",
         options=["無制限"] + [str(i) for i in range(21)],
-        index=5
+        index=4
     )
     if skip_limit_option == "無制限":
         max_skips_val = float("inf")
@@ -326,7 +378,6 @@ if not st.session_state.game_started:
 
     st.markdown("")
     
-    # スマホ等の画面幅でも崩れないよう、4列グリッドを明示的に構築
     num_cols = 4
     rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
     
@@ -372,7 +423,6 @@ else:
     num_closer = st.session_state.config_num_closer
     num_batters = st.session_state.config_num_batters
 
-    # 守備ポジションから「投手(二刀流)」を削除
     all_defensive_positions = ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者"]
 
     st.sidebar.title("📋 メニュー")
@@ -388,12 +438,10 @@ else:
     with col_sub:
         st.subheader("🏟️ チーム編成ボード")
         
-        # --- 野手ボードの作成 ---
+        # --- 野手ボード ---
         st.markdown(f"### 【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】")
         
-        batter_template_roles = []
-        for i in range(1, 10):
-            batter_template_roles.append(f"{i}番")
+        batter_template_roles = [f"{i}番" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
         for i in range(1, bench_count + 1):
             batter_template_roles.append(f"控え{i}")
@@ -421,7 +469,7 @@ else:
         batter_table_height = 38 + len(batter_display_rows) * 35
         st.dataframe(pd.DataFrame(batter_display_rows), use_container_width=True, hide_index=True, height=batter_table_height)
 
-        # --- 投手ボードの作成（先発→中継ぎ→抑えの順序・枠を完全固定） ---
+        # --- 投手ボード ---
         total_pitcher_slots = num_starting + num_relief + num_closer
         st.markdown(f"### 【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】")
         
@@ -433,7 +481,6 @@ else:
         for i in range(1, num_closer + 1):
             pitcher_template_roles.append(f"抑え{i}" if num_closer > 1 else "抑え")
 
-        # 登録された投手を使いたい起用法ごとに整理
         pitchers_by_role = {"先発": [], "中継ぎ": [], "抑え": []}
         for p in st.session_state.my_team["pitchers"]:
             r = p["起用法"]
@@ -441,22 +488,18 @@ else:
                 pitchers_by_role[r].append(p)
 
         pitcher_display_rows = []
-        
         s_idx, r_idx, c_idx = 0, 0, 0
         for target_role in pitcher_template_roles:
             assigned_player = None
-            if "先発" in target_role:
-                if s_idx < len(pitchers_by_role["先発"]):
-                    assigned_player = pitchers_by_role["先発"][s_idx]
-                    s_idx += 1
-            elif "中継ぎ" in target_role:
-                if r_idx < len(pitchers_by_role["中継ぎ"]):
-                    assigned_player = pitchers_by_role["中継ぎ"][r_idx]
-                    r_idx += 1
-            elif "抑え" in target_role:
-                if c_idx < len(pitchers_by_role["抑え"]):
-                    assigned_player = pitchers_by_role["抑え"][c_idx]
-                    c_idx += 1
+            if "先発" in target_role and s_idx < len(pitchers_by_role["先発"]):
+                assigned_player = pitchers_by_role["先発"][s_idx]
+                s_idx += 1
+            elif "中継ぎ" in target_role and r_idx < len(pitchers_by_role["中継ぎ"]):
+                assigned_player = pitchers_by_role["中継ぎ"][r_idx]
+                r_idx += 1
+            elif "抑え" in target_role and c_idx < len(pitchers_by_role["抑え"]):
+                assigned_player = pitchers_by_role["抑え"][c_idx]
+                c_idx += 1
 
             if assigned_player:
                 pitcher_display_rows.append({
@@ -494,9 +537,13 @@ else:
             with c1:
                 is_lottery_disabled = (st.session_state.current_lottery is not None)
                 if st.button("🎲 抽選する（球団 ＆ 年）", type="primary", disabled=is_lottery_disabled, use_container_width=True):
-                    chosen_team = random.choice(TEAMS_LIST)
-                    chosen_year = random.choice(selected_years)
-                    _, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                    # 抽選ループ：選ばれた年に対して、その年に実際に存在するチームが出るまで再抽選する
+                    while True:
+                        chosen_team = random.choice(TEAMS_LIST)
+                        chosen_year = random.choice(selected_years)
+                        t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                        if t_code is not None:
+                            break
                     
                     fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
                     
@@ -517,9 +564,12 @@ else:
                 if st.button(skip_button_label, disabled=is_skip_disabled, use_container_width=True):
                     if st.session_state.skip_count < max_skips:
                         st.session_state.skip_count += 1
-                        chosen_team = random.choice(TEAMS_LIST)
-                        chosen_year = selected_years[random.randint(0, len(selected_years) - 1)]
-                        _, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                        while True:
+                            chosen_team = random.choice(TEAMS_LIST)
+                            chosen_year = selected_years[random.randint(0, len(selected_years) - 1)]
+                            t_code, actual_team_name = get_team_code_and_name(chosen_team, chosen_year)
+                            if t_code is not None:
+                                break
                         
                         fetched_players = fetch_npb_draft_data(chosen_team, chosen_year)
                             
@@ -534,7 +584,7 @@ else:
         if st.session_state.current_lottery:
             lottery = st.session_state.current_lottery
             short_name = get_short_team_name(lottery['team'], lottery['year'])
-            st.info(f"✨ 抽選結果： **{lottery['year']}** の **{short_name}** が選ばれました！")
+            st.info(f"✨ 抽選結果： **{lottery['year']}** の **{short_name} ({lottery['actual_team_name']})** が選ばれました！")
             
             if not lottery["players"]:
                 st.warning("⚠️ この年のデータが見つかりませんでした。別のボタンで引き直してください。")
