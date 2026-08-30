@@ -190,13 +190,19 @@ def fetch_draft_tokyo_data(team_name, year):
         
         for row in rows:
             cols = [col.get_text(strip=True) for col in row.find_all(["th", "td"])]
-            if not cols or "順位" in cols[0] or "選手名" in cols:
+            if not cols or "順位" in cols[0] or "選手名" in cols or "守備" in cols:
                 continue
                 
             if len(cols) >= 2:
                 rank = cols[0]
-                name = cols[1]
-                pos = cols[2] if len(cols) > 2 else "---"
+                
+                # ★【修正ポイント】1998年〜2009年は列順が [順位, 守備, 選手名] になっているため分岐する
+                if 1998 <= year <= 2009:
+                    pos = cols[1] if len(cols) > 1 else "---"
+                    name = cols[2] if len(cols) > 2 else "---"
+                else:
+                    name = cols[1]
+                    pos = cols[2] if len(cols) > 2 else "---"
                 
                 status = "入団"
                 row_full_text = row.get_text()
@@ -222,7 +228,6 @@ def fetch_draft_tokyo_data(team_name, year):
         return players
     except Exception:
         return []
-
 # =====================================================================
 # 4. セッションステートの初期化
 # =====================================================================
@@ -426,7 +431,7 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    st.title("⚾ ドラフト×ドラフト")
+    st.title("⚾ ドラフト×ドラフト (略称優先・draft.tokyo 版)")
     st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
     col_sub, col_main = st.columns([1, 1.2])
