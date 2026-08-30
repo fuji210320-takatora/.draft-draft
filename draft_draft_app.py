@@ -431,7 +431,7 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    st.title("⚾ ドラフト×ドラフト (略称優先・draft.tokyo 版)")
+    st.title("⚾ ドラフト×ドラフト)")
     st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
     col_sub, col_main = st.columns([1, 1.2])
