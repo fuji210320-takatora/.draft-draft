@@ -167,6 +167,9 @@ def get_short_team_name(team_name, year):
         else: return "ロッテ"
     if "近鉄" in team_name: return "近鉄"
     if "楽天" in team_name: return "楽天"
+    if "オリックス" in team_name or "オリックス" in team_name or "阪急" in team_name:
+        if 1965 <= year <= 1987: return "阪急"
+        elif 1988 <= year <= 2002: return "オリックス"
     return team_name
 
 def get_position_short_name(pos):
