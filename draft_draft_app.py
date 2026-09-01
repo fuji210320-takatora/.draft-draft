@@ -16,11 +16,6 @@ st.markdown("""
         font-size: 15px; 
     }
     
-    /* 表（dataframe）の中の文字サイズを変更 */
-    div[data-testid="stDataFrame"] div[role="grid"] {
-        font-size: 15px;
-    }
-    
     /* 見出しの文字サイズ変更 */
     h1 {
         font-size: 26px !important;
@@ -69,7 +64,7 @@ def get_draft_tokyo_team_names(team_name, year):
     elif "広島" in team_name:
         if 1965 <= year <= 1967:
             return ["広島", "広島カープ"]
-        else:
+        elif 1968 <= year <= 2025:
             return ["広島", "広島東洋カープ"]
     elif "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name:
         if 1965 <= year <= 1978:
@@ -78,7 +73,7 @@ def get_draft_tokyo_team_names(team_name, year):
             return ["大洋", "横浜大洋ホエールズ"]
         elif 1992 <= year <= 2011:
             return ["横浜", "横浜ベイスターズ"]
-        else:
+        elif 2012 <= year <= 2025:
             return ["DeNA", "横浜DeNAベイスターズ"]
     elif "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name:
         if 1965 <= year <= 1971:
@@ -89,28 +84,28 @@ def get_draft_tokyo_team_names(team_name, year):
             return ["クラウン", "クラウンライターライオンズ"]
         elif 1979 <= year <= 2007:
             return ["西武", "西武ライオンズ"]
-        else:
+        elif 2008 <= year <= 2025:
             return ["西武", "埼玉西武ライオンズ"]
     elif "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name:
         if 1965 <= year <= 1987:
             return ["南海", "南海ホークス"]
         elif 1988 <= year <= 2003:
             return ["ダイエー", "福岡ダイエーホークス"]
-        else:
+        elif 2004 <= year <= 2025:
             return ["ソフトバンク", "福岡ソフトバンクホークス"]
     elif "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name:
         if 1965 <= year <= 1972:
             return ["東映", "東映フライヤーズ"]
         elif 1973 <= year <= 2002:
             return ["日本ハム", "日本ハムファイターズ"]
-        else:
+        elif 2003 <= year <= 2025:
             return ["日本ハム", "北海道日本ハムファイターズ"]
     elif "ロッテ" in team_name or ("東京" in team_name and year <= 1968):
         if 1965 <= year <= 1968:
             return ["東京", "東京オリオンズ"]
         elif 1969 <= year <= 1990:
             return ["ロッテ", "ロッテオリオンズ"]
-        else:
+        elif 1991 <= year <= 2025:
             return ["ロッテ", "千葉ロッテマリーンズ"]
     elif "近鉄" in team_name:
         if 1965 <= year <= 1998:
@@ -126,7 +121,7 @@ def get_draft_tokyo_team_names(team_name, year):
             return ["オリックス", "オリックス・ブレーブス"]
         elif 1991 <= year <= 2003:
             return ["オリックス", "オリックス・ブルーウェーブ"]
-        else:
+        elif 2004 <= year <= 2025:
             return ["オリックス", "オリックスバファローズ"]
     elif "楽天" in team_name:
         if year < 2004:
@@ -139,20 +134,58 @@ def get_short_team_name(team_name, year):
     if "阪神" in team_name: return "阪神"
     if "巨人" in team_name or "読売" in team_name: return "読売"
     if "中日" in team_name: return "中日"
-    if "ヤクルト" in team_name or "サンケイ" in team_name or "アトムズ" in team_name: return "ヤクルト"
-    if "広島" in team_name: return "広島"
-    if "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name: return "DeNA"
-    if "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name: return "西武"
-    if "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name: return "ソフトバンク"
-    if "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name: return "日本ハム"
-    if "ロッテ" in team_name or "東京" in team_name: return "ロッテ"
-    if "オリックス" in team_name or "阪急" in team_name: return "オリックス"
+    if "ヤクルト" in team_name or "サンケイ" in team_name or "アトムズ" in team_name:
+        if year == 1965: return "サンケイ"
+        elif 1966 <= year <= 1968: return "サンケイ"
+        elif year == 1969: return "アトムズ"
+        elif 1970 <= year <= 1973: return "ヤクルト"
+        elif 1974 <= year <= 2005: return "ヤクルト"
+        else: return "ヤクルト"
+    if "広島" in team_name:
+        if 1965 <= year <= 1967: return "広島"
+        else: return "広島"
+    if "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name:
+        if 1965 <= year <= 1978: return "大洋"
+        elif 1979 <= year <= 1991: return "大洋"
+        elif 1992 <= year <= 2011: return "横浜"
+        else: return "DeNA"
+    if "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name:
+        if 1965 <= year <= 1971: return "西鉄"
+        elif 1972 <= year <= 1976: return "太平洋"
+        elif 1977 <= year <= 1978: return "クラウン"
+        else: return "西武"
+    if "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name:
+        if 1965 <= year <= 1987: return "南海"
+        elif 1988 <= year <= 2003: return "ダイエー"
+        else: return "ソフトバンク"
+    if "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name:
+        if 1965 <= year <= 1972: return "東映"
+        elif 1973 <= year <= 2002: return "日本ハム"
+        else: return "日本ハム"
+    if "ロッテ" in team_name or "東京" in team_name:
+        if 1965 <= year <= 1968: return "東京"
+        else: return "ロッテ"
     if "近鉄" in team_name: return "近鉄"
     if "楽天" in team_name: return "楽天"
     return team_name
 
+def get_position_short_name(pos):
+    mapping = {
+        "投手": "投",
+        "捕手": "捕",
+        "一塁手": "一",
+        "二塁手": "二",
+        "三塁手": "三",
+        "遊撃手": "遊",
+        "左翼手": "左",
+        "中堅手": "中",
+        "右翼手": "右",
+        "指名打者": "指"
+    }
+    return mapping.get(pos, pos)
+
 # =====================================================================
-# 3. draft.tokyo スクレイピング関数 (h3直後方式)
+# 3. draft.tokyo スクレイピング関数
 # =====================================================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_draft_tokyo_data(team_name, year):
@@ -196,7 +229,6 @@ def fetch_draft_tokyo_data(team_name, year):
             if len(cols) >= 2:
                 rank = cols[0]
                 
-                # ★【修正ポイント】1998年〜2009年は列順が [順位, 守備, 選手名] になっているため分岐する
                 if 1998 <= year <= 2009:
                     pos = cols[1] if len(cols) > 1 else "---"
                     name = cols[2] if len(cols) > 2 else "---"
@@ -228,6 +260,7 @@ def fetch_draft_tokyo_data(team_name, year):
         return players
     except Exception:
         return []
+
 # =====================================================================
 # 4. セッションステートの初期化
 # =====================================================================
@@ -244,13 +277,12 @@ if "skip_count" not in st.session_state:
 if "used_lotteries" not in st.session_state:
     st.session_state.used_lotteries = set()
 
-all_years = list(range(2025, 1964, -1)) # 2025年〜1964年
+all_years = list(range(2025, 1964, -1))
 
 for y in all_years:
     if f"setup_year_{y}" not in st.session_state:
         st.session_state[f"setup_year_{y}"] = True
 
-# テキストインプットの初期値を安全に設定するためのキー管理
 if "year_text_input" not in st.session_state:
     st.session_state.year_text_input = "2025〜1965"
 
@@ -288,7 +320,6 @@ if not st.session_state.game_started:
     no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない", value=True)
 
     st.markdown("---")
-    st.markdown("---")
     st.markdown("### 📅 対象年度の設定 (1965〜2025)")
 
     def on_text_change():
@@ -318,11 +349,9 @@ if not st.session_state.game_started:
             for y in all_years:
                 st.session_state[f"setup_year_{y}"] = (y in parsed_years)
 
-    # ★【ポイント】ここで st.text_input が描画される「前」に値を反映させる
     if "_next_year_input" in st.session_state:
         st.session_state.year_text_input = st.session_state.pop("_next_year_input")
 
-    # 実際にテキストインプットを描画
     st.text_input(
         "対象年度を直接入力 (例: `2010〜2020` または `2025, 2020, 2010〜2015`)",
         key="year_text_input",
@@ -353,11 +382,6 @@ if not st.session_state.game_started:
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = False
         st.session_state["_next_year_input"] = ""
-        st.rerun()
-
-    # 次の描画時にテキストインプットの値を上書きする処理
-    if "_next_year_input" in st.session_state:
-        st.session_state.year_text_input = st.session_state.pop("_next_year_input")
         st.rerun()
 
     st.markdown("")
@@ -431,7 +455,7 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    st.title("⚾ ドラフト×ドラフト)")
+    st.title("⚾ ドラフト×ドラフト")
     st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
     col_sub, col_main = st.columns([1, 1.2])
@@ -439,52 +463,69 @@ else:
     with col_sub:
         st.subheader("🏟️ チーム編成ボード")
         
-        # 野手ボード
+        # -------------------------------------------------------------
+        # 野手陣の表示
+        # -------------------------------------------------------------
         st.markdown(f"### 【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】")
-        batter_template_roles = [f"{i}番" for i in range(1, 10)]
+        batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
         for i in range(1, bench_count + 1):
-            batter_template_roles.append(f"控え{i}")
+            if bench_count == 1:
+                batter_template_roles.append("控")
+            else:
+                batter_template_roles.append(f"控{i}")
 
-        batter_display_rows = []
         existing_batters_dict = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
+        
         for target_role in batter_template_roles:
             if target_role in existing_batters_dict:
                 b = existing_batters_dict[target_role]
-                batter_display_rows.append({"打順/役割": b["打順/役割"], "守備位置": b["守備位置"], "選手名": b["選手名"], "出自": b["出自"]})
+                if target_role.startswith("控"):
+                    st.markdown(f"`{target_role}` **{b['選手名']}** ({b['出自']})")
+                else:
+                    pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
+                    st.markdown(f"`{target_role}` `{pos_short}` **{b['選手名']}** ({b['出自']})")
             else:
-                batter_display_rows.append({"打順/役割": target_role, "守備位置": "---", "選手名": "---", "出自": "---"})
-        st.dataframe(pd.DataFrame(batter_display_rows), use_container_width=True, hide_index=True, height=38 + len(batter_display_rows) * 35)
+                if target_role.startswith("控"):
+                    st.markdown(f"`{target_role}` 未選択 (---)")
+                else:
+                    st.markdown(f"`{target_role}` `-` 未選択 (---)")
 
-        # 投手ボード
+        st.markdown("---")
+
+        # -------------------------------------------------------------
+        # 投手陣の表示（「投」を排除し「先」「継」「抑」および番号のみ）
+        # -------------------------------------------------------------
         total_pitcher_slots = num_starting + num_relief + num_closer
         st.markdown(f"### 【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】")
+        
         pitcher_template_roles = []
-        for i in range(1, num_starting + 1): pitcher_template_roles.append(f"先発{i}" if num_starting > 1 else "先発")
-        for i in range(1, num_relief + 1): pitcher_template_roles.append(f"中継ぎ{i}" if num_relief > 1 else "中継ぎ")
-        for i in range(1, num_closer + 1): pitcher_template_roles.append(f"抑え{i}" if num_closer > 1 else "抑え")
+        for i in range(1, num_starting + 1): 
+            pitcher_template_roles.append("先" if num_starting == 1 else f"先{i}")
+        for i in range(1, num_relief + 1): 
+            pitcher_template_roles.append("継" if num_relief == 1 else f"継{i}")
+        for i in range(1, num_closer + 1): 
+            pitcher_template_roles.append("抑" if num_closer == 1 else f"抑{i}")
 
         pitchers_by_role = {"先発": [], "中継ぎ": [], "抑え": []}
         for p in st.session_state.my_team["pitchers"]:
             if p["起用法"] in pitchers_by_role:
                 pitchers_by_role[p["起用法"]].append(p)
 
-        pitcher_display_rows = []
         s_idx, r_idx, c_idx = 0, 0, 0
         for target_role in pitcher_template_roles:
             assigned_player = None
-            if "先発" in target_role and s_idx < len(pitchers_by_role["先発"]):
+            if target_role.startswith("先") and s_idx < len(pitchers_by_role["先発"]):
                 assigned_player = pitchers_by_role["先発"][s_idx]; s_idx += 1
-            elif "中継ぎ" in target_role and r_idx < len(pitchers_by_role["中継ぎ"]):
+            elif target_role.startswith("継") and r_idx < len(pitchers_by_role["中継ぎ"]):
                 assigned_player = pitchers_by_role["中継ぎ"][r_idx]; r_idx += 1
-            elif "抑え" in target_role and c_idx < len(pitchers_by_role["抑え"]):
+            elif target_role.startswith("抑") and c_idx < len(pitchers_by_role["抑え"]):
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                pitcher_display_rows.append({"起用法": target_role, "選手名": assigned_player["選手名"], "出自": assigned_player["出自"]})
+                st.markdown(f"`{target_role}` **{assigned_player['選手名']}** ({assigned_player['出自']})")
             else:
-                pitcher_display_rows.append({"起用法": target_role, "選手名": "---", "出自": "---"})
-        st.dataframe(pd.DataFrame(pitcher_display_rows), use_container_width=True, hide_index=True, height=38 + len(pitcher_display_rows) * 35)
+                st.markdown(f"`{target_role}` 未選択 (---)")
 
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
@@ -596,64 +637,68 @@ else:
                 st.dataframe(styled_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
                 
                 st.subheader("✍️ 選手を指名して役割を決定する")
-                role_type = st.radio("選手タイプを選択してください", ["野手", "投手"], horizontal=True)
+                role_type = st.radio("選手タイプを選択してください", ["野手", "投手"], horizontal=True, key="role_type_radio")
                 
                 current_batters_count = len(st.session_state.my_team["batters"])
                 current_starting_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "先発")
                 current_relief_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "中継ぎ")
                 current_closer_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "抑え")
                 
-                with st.form("select_form"):
-                    player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['status']})": p for p in lottery["players"]}
-                    selected_key = st.selectbox("指名する選手を選択", options=list(player_options.keys()))
+                player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['status']})": p for p in lottery["players"]}
+                selected_key = st.selectbox("指名する選手を選択", options=list(player_options.keys()))
+                
+                assigned_bat_role = ""
+                assigned_pos = "-"
+                assigned_pitcher_role = ""
+                
+                if role_type == "野手":
+                    if current_batters_count >= num_batters:
+                        st.warning("⚠️ 野手枠はすでに満員です！")
                     
-                    assigned_bat_role = ""
-                    assigned_pos = "-"
-                    assigned_pitcher_role = ""
+                    available_batter_roles = []
+                    for i in range(1, 10):
+                        role_name = f"{i}"
+                        if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
+                            available_batter_roles.append(role_name)
                     
-                    if role_type == "野手":
-                        if current_batters_count >= num_batters:
-                            st.warning("⚠️ 野手枠はすでに満員です！")
-                        
-                        available_batter_roles = []
-                        for i in range(1, 10):
-                            role_name = f"{i}番"
-                            if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
-                                available_batter_roles.append(role_name)
-                        for i in range(1, max(0, num_batters - 9) + 1):
-                            role_name = f"控え{i}"
-                            if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
-                                available_batter_roles.append(role_name)
-                                
-                        assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
+                    bench_max = max(0, num_batters - 9)
+                    for i in range(1, bench_max + 1):
+                        role_name = "控" if bench_max == 1 else f"控{i}"
+                        if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
+                            available_batter_roles.append(role_name)
+                            
+                    assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
+                    
+                    # 控えが選ばれている場合はポジション選択を完全に非表示にする
+                    if assigned_bat_role.startswith("控"):
+                        assigned_pos = "---"
+                    else:
                         used_positions = [b["守備位置"] for b in st.session_state.my_team["batters"] if b["守備位置"] != "---"]
                         available_positions = [pos for pos in all_defensive_positions if pos not in used_positions]
                         assigned_pos = st.selectbox("守備ポジションを選択", options=available_positions if available_positions else ["すべてのポジションが埋まっています"])
+                else:
+                    available_pitcher_types = []
+                    if current_starting_count < num_starting: available_pitcher_types.append("先発")
+                    if current_relief_count < num_relief: available_pitcher_types.append("中継ぎ")
+                    if current_closer_count < num_closer: available_pitcher_types.append("抑え")
+                    assigned_pitcher_role = st.selectbox("投手起用法を選択", options=available_pitcher_types if available_pitcher_types else ["満員"])
+                
+                if st.button("この選手を決定して登録！", type="primary", use_container_width=True):
+                    chosen_player = player_options[selected_key]
+                    if role_type == "野手" and (current_batters_count >= num_batters or assigned_bat_role == "満員" or (not assigned_bat_role.startswith("控") and assigned_pos == "すべてのポジションが埋まっています")):
+                        st.error("野手枠が上限に達しているか、選べる打順・ポジションがありません。")
+                    elif role_type == "投手" and assigned_pitcher_role == "満員":
+                        st.error("選べる投手起用法枠がありません。")
                     else:
-                        available_pitcher_types = []
-                        if current_starting_count < num_starting: available_pitcher_types.append("先発")
-                        if current_relief_count < num_relief: available_pitcher_types.append("中継ぎ")
-                        if current_closer_count < num_closer: available_pitcher_types.append("抑え")
-                        assigned_pitcher_role = st.selectbox("投手起用法を選択", options=available_pitcher_types if available_pitcher_types else ["満員"])
-                    
-                    submit_btn = st.form_submit_button("この選手を決定して登録！", use_container_width=True)
-                    
-                    if submit_btn:
-                        chosen_player = player_options[selected_key]
-                        if role_type == "野手" and (current_batters_count >= num_batters or assigned_bat_role == "満員" or assigned_pos == "すべてのポジションが埋まっています"):
-                            st.error("野手枠が上限に達しているか、選べる打順・ポジションがありません。")
-                        elif role_type == "投手" and assigned_pitcher_role == "満員":
-                            st.error("選べる投手起用法枠がありません。")
+                        short_team_name = get_short_team_name(lottery['team'], lottery['year'])
+                        origin_text = f"{lottery['year']}{short_team_name}{chosen_player['rank_str']}"
+                        
+                        if role_type == "野手":
+                            st.session_state.my_team["batters"].append({"打順/役割": assigned_bat_role, "守備位置": assigned_pos, "選手名": chosen_player["name"], "出自": origin_text})
                         else:
-                            short_team_name = get_short_team_name(lottery['team'], lottery['year'])
-                            origin_text = f"{lottery['year']} {short_team_name} ({chosen_player['rank_str']})"
-                            
-                            if role_type == "野手":
-                                st.session_state.my_team["batters"].append({"打順/役割": assigned_bat_role, "守備位置": assigned_pos, "選手名": chosen_player["name"], "出自": origin_text})
-                            else:
-                                st.session_state.my_team["pitchers"].append({"起用法": assigned_pitcher_role, "選手名": chosen_player["name"], "出自": origin_text})
-                            
-                            st.session_state.draft_count += 1
-                            st.session_state.current_lottery = None
-                            st.success(f"{chosen_player['name']} 選手を指名しました！")
-                            st.rerun()
+                            st.session_state.my_team["pitchers"].append({"起用法": assigned_pitcher_role, "選手名": chosen_player["name"], "出自": origin_text})
+                        
+                        st.session_state.draft_count += 1
+                        st.session_state.current_lottery = None
+                        st.success(f"{chosen_player['name']} 選手を指名しました！")
+                        st.rerun()
