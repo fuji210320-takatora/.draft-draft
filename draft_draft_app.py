@@ -693,7 +693,9 @@ else:
                     elif role_type == "投手" and assigned_pitcher_role == "満員":
                         st.error("選べる投手起用法枠がありません。")
                     else:
-                        short_team_name = get_short_team_name(lottery['team'], lottery['year'])
+                        # 修正前： short_team_name = get_short_team_name(lottery['team'], lottery['year'])
+                        # 修正後： lottery['actual_team_name'] を渡すようにする
+                        short_team_name = get_short_team_name(lottery['actual_team_name'], lottery['year'])
                         origin_text = f"{lottery['year']}{short_team_name}{chosen_player['rank_str']}"
                         
                         if role_type == "野手":
