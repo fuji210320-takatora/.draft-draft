@@ -23,6 +23,21 @@ st.markdown("""
     h3 {
         font-size: 18px !important;
     }
+    
+    /* スマホ表示時、6列のチェックボックス群（対象年度選択）のみを3列グリッドに折り返す */
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 4px !important;
+            margin-bottom: 0px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) > div[data-testid="column"] {
+            width: auto !important;
+            flex: none !important;
+            padding: 0px !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -312,14 +327,12 @@ def generate_year_text():
             parts.append(f"{start}〜{end}")
     return ", ".join(parts)
 
-# ウィジェット描画前に安全に反映させるためのペンディング値
 if "pending_year_text" not in st.session_state:
     st.session_state.pending_year_text = generate_year_text()
 
 if "year_text_input" not in st.session_state:
     st.session_state.year_text_input = st.session_state.pending_year_text
 else:
-    # ウィジェット描画前にペンディングされた値があれば安全に上書きする
     st.session_state.year_text_input = st.session_state.pending_year_text
 
 def update_checkboxes_from_text():
@@ -389,7 +402,6 @@ if not st.session_state.game_started:
     st.markdown("---")
     st.markdown("### 📅 対象年度の設定 (1965〜2025)")
 
-    # テキスト入力（on_changeで直接入力の文字からチェックボックスを更新）
     st.text_input(
         "対象年度を直接入力 (例: `2010〜2020` または `1965, 1970, 2010〜2015`)",
         key="year_text_input",
@@ -427,7 +439,6 @@ if not st.session_state.game_started:
     rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
     
     def on_checkbox_change():
-        # チェックボックスが変更されたら、テキスト入力欄のペンディング値を更新する
         st.session_state.pending_year_text = generate_year_text()
 
     for row_years in rows:
