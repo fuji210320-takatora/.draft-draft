@@ -24,18 +24,17 @@ st.markdown("""
         font-size: 18px !important;
     }
     
-    /* スマホ表示時、6列のチェックボックス群（対象年度選択）を3列に折り返す */
+    /* スマホ表示時、年度選択のチェックボックス群を3列グリッドに折り返す */
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) {
-            display: flex !important;
-            flex-wrap: wrap !important;
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
             gap: 4px !important;
             margin-bottom: 0px !important;
         }
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) > div[data-testid="column"] {
-            flex: 0 0 31% !important;
-            max-width: 31% !important;
-            min-width: 80px !important;
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) > div[data-testid="column"] {
+            width: auto !important;
+            flex: none !important;
             padding: 0px !important;
         }
     }
