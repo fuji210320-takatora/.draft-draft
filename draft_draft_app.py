@@ -11,12 +11,9 @@ st.set_page_config(page_title="ドラフト×ドラフト", layout="wide")
 
 st.markdown("""
 <style>
-    /* アプリ全体の基本の文字サイズを変更 */
     html, body, [class*="css"] {
         font-size: 15px; 
     }
-    
-    /* 見出しの文字サイズ変更 */
     h1 {
         font-size: 26px !important;
     }
@@ -38,8 +35,10 @@ TEAMS_LIST = [
     "大阪近鉄バファローズ", "東北楽天ゴールデンイーグルス"
 ]
 
+all_years = list(range(1965, 2026))
+
 # =====================================================================
-# 2. 略称を優先・主体とした変遷マッピング関数
+# 2. 補助関数（チーム名・表記関連）
 # =====================================================================
 def get_draft_tokyo_team_names(team_name, year):
     if "巨人" in team_name or "読売" in team_name:
@@ -64,7 +63,7 @@ def get_draft_tokyo_team_names(team_name, year):
     elif "広島" in team_name:
         if 1965 <= year <= 1967:
             return ["広島", "広島カープ"]
-        elif 1968 <= year <= 2025:
+        else:
             return ["広島", "広島東洋カープ"]
     elif "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name:
         if 1965 <= year <= 1978:
@@ -73,7 +72,7 @@ def get_draft_tokyo_team_names(team_name, year):
             return ["大洋", "横浜大洋ホエールズ"]
         elif 1992 <= year <= 2011:
             return ["横浜", "横浜ベイスターズ"]
-        elif 2012 <= year <= 2025:
+        else:
             return ["DeNA", "横浜DeNAベイスターズ"]
     elif "西武" in team_name or "西鉄" in team_name or "太平洋" in team_name or "クラウン" in team_name:
         if 1965 <= year <= 1971:
@@ -84,28 +83,28 @@ def get_draft_tokyo_team_names(team_name, year):
             return ["クラウン", "クラウンライターライオンズ"]
         elif 1979 <= year <= 2007:
             return ["西武", "西武ライオンズ"]
-        elif 2008 <= year <= 2025:
+        else:
             return ["西武", "埼玉西武ライオンズ"]
     elif "ソフトバンク" in team_name or "ダイエー" in team_name or "南海" in team_name:
         if 1965 <= year <= 1987:
             return ["南海", "南海ホークス"]
         elif 1988 <= year <= 2003:
             return ["ダイエー", "福岡ダイエーホークス"]
-        elif 2004 <= year <= 2025:
+        else:
             return ["ソフトバンク", "福岡ソフトバンクホークス"]
     elif "日本ハム" in team_name or "日ハム" in team_name or "東映" in team_name:
         if 1965 <= year <= 1972:
             return ["東映", "東映フライヤーズ"]
         elif 1973 <= year <= 2002:
             return ["日本ハム", "日本ハムファイターズ"]
-        elif 2003 <= year <= 2025:
+        else:
             return ["日本ハム", "北海道日本ハムファイターズ"]
     elif "ロッテ" in team_name or ("東京" in team_name and year <= 1968):
         if 1965 <= year <= 1968:
             return ["東京", "東京オリオンズ"]
         elif 1969 <= year <= 1990:
             return ["ロッテ", "ロッテオリオンズ"]
-        elif 1991 <= year <= 2025:
+        else:
             return ["ロッテ", "千葉ロッテマリーンズ"]
     elif "近鉄" in team_name:
         if 1965 <= year <= 1998:
@@ -117,11 +116,9 @@ def get_draft_tokyo_team_names(team_name, year):
     elif "オリックス" in team_name or "阪急" in team_name:
         if 1965 <= year <= 1987:
             return ["阪急", "阪急ブレーブス"]
-        elif 1988 <= year <= 1990:
+        elif 1988 <= year <= 2003:
             return ["オリックス", "オリックス・ブレーブス"]
-        elif 1991 <= year <= 2003:
-            return ["オリックス", "オリックス・ブルーウェーブ"]
-        elif 2004 <= year <= 2025:
+        else:
             return ["オリックス", "オリックスバファローズ"]
     elif "楽天" in team_name:
         if year < 2004:
@@ -167,9 +164,10 @@ def get_short_team_name(team_name, year):
         else: return "ロッテ"
     if "近鉄" in team_name: return "近鉄"
     if "楽天" in team_name: return "楽天"
-    if "オリックス" in team_name or "オリックス" in team_name or "阪急" in team_name:
+    if "オリックス" in team_name or "阪急" in team_name:
         if 1965 <= year <= 1987: return "阪急"
-        elif 1988 <= year <= 2002: return "オリックス"
+        elif 1988 <= year <= 2003: return "オリックス"
+        else: return "オリックス"
     return team_name
 
 def get_position_short_name(pos):
@@ -265,7 +263,7 @@ def fetch_draft_tokyo_data(team_name, year):
         return []
 
 # =====================================================================
-# 4. セッションステートの初期化
+# 4. セッションステートの初期化 ＆ 同期ロジック
 # =====================================================================
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
@@ -280,14 +278,80 @@ if "skip_count" not in st.session_state:
 if "used_lotteries" not in st.session_state:
     st.session_state.used_lotteries = set()
 
-all_years = list(range(2025, 1964, -1))
-
 for y in all_years:
     if f"setup_year_{y}" not in st.session_state:
         st.session_state[f"setup_year_{y}"] = True
 
+def generate_year_text():
+    """現在のチェックボックス状態から、綺麗にまとまった直接入力文字列を生成する"""
+    active_y = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
+    if not active_y:
+        return ""
+    if len(active_y) == len(all_years):
+        return f"{min(all_years)}〜{max(all_years)}"
+    
+    active_y = sorted(active_y)
+    ranges = []
+    range_start = active_y[0]
+    range_end = active_y[0]
+    
+    for y in active_y[1:]:
+        if y == range_end + 1:
+            range_end = y
+        else:
+            ranges.append((range_start, range_end))
+            range_start = y
+            range_end = y
+    ranges.append((range_start, range_end))
+    
+    parts = []
+    for start, end in ranges:
+        if start == end:
+            parts.append(str(start))
+        else:
+            parts.append(f"{start}〜{end}")
+    return ", ".join(parts)
+
+# ウィジェット描画前に安全に反映させるためのペンディング値
+if "pending_year_text" not in st.session_state:
+    st.session_state.pending_year_text = generate_year_text()
+
 if "year_text_input" not in st.session_state:
-    st.session_state.year_text_input = "2025〜1965"
+    st.session_state.year_text_input = st.session_state.pending_year_text
+else:
+    # ウィジェット描画前にペンディングされた値があれば安全に上書きする
+    st.session_state.year_text_input = st.session_state.pending_year_text
+
+def update_checkboxes_from_text():
+    """テキストボックスに入力された文字列を解析してチェックボックスに反映する"""
+    val = st.session_state.get("year_text_input", "")
+    parsed_years = set()
+    parts = val.replace("～", "~").replace("-", "~").replace("〜", "~").split(",")
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        if "~" in part:
+            try:
+                sub_parts = part.split("~")
+                if len(sub_parts) == 2:
+                    s, e = int(sub_parts[0].strip()), int(sub_parts[1].strip())
+                    for y in range(min(s, e), max(s, e) + 1):
+                        if 1965 <= y <= 2025:
+                            parsed_years.add(y)
+            except:
+                pass
+        else:
+            try:
+                y = int(part)
+                if 1965 <= y <= 2025:
+                    parsed_years.add(y)
+            except:
+                pass
+    
+    for y in all_years:
+        st.session_state[f"setup_year_{y}"] = (y in parsed_years)
+    st.session_state.pending_year_text = generate_year_text()
 
 # =====================================================================
 # 5. スタート前画面
@@ -325,40 +389,11 @@ if not st.session_state.game_started:
     st.markdown("---")
     st.markdown("### 📅 対象年度の設定 (1965〜2025)")
 
-    def on_text_change():
-        val = st.session_state.year_text_input
-        parsed_years = set()
-        parts = val.replace("～", "~").replace("-", "~").split(",")
-        for part in parts:
-            part = part.strip()
-            if "~" in part:
-                try:
-                    start_s, end_s = part.split("~")
-                    s, e = int(start_s.strip()), int(end_s.strip())
-                    for y in range(min(s, e), max(s, e) + 1):
-                        if 1965 <= y <= 2025:
-                            parsed_years.add(y)
-                except:
-                    pass
-            else:
-                try:
-                    y = int(part)
-                    if 1965 <= y <= 2025:
-                        parsed_years.add(y)
-                except:
-                    pass
-        
-        if parsed_years:
-            for y in all_years:
-                st.session_state[f"setup_year_{y}"] = (y in parsed_years)
-
-    if "_next_year_input" in st.session_state:
-        st.session_state.year_text_input = st.session_state.pop("_next_year_input")
-
+    # テキスト入力（on_changeで直接入力の文字からチェックボックスを更新）
     st.text_input(
-        "対象年度を直接入力 (例: `2010〜2020` または `2025, 2020, 2010〜2015`)",
+        "対象年度を直接入力 (例: `2010〜2020` または `1965, 1970, 2010〜2015`)",
         key="year_text_input",
-        on_change=on_text_change
+        on_change=update_checkboxes_from_text
     )
 
     q_col1, q_col2, q_col3, q_col4 = st.columns(4)
@@ -366,36 +401,40 @@ if not st.session_state.game_started:
     if q_col1.button("2000年以降", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = (2000 <= y <= 2025)
-        st.session_state["_next_year_input"] = "2025〜2000"
+        st.session_state.pending_year_text = generate_year_text()
         st.rerun()
 
     if q_col2.button("1990年以降", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = (1990 <= y <= 2025)
-        st.session_state["_next_year_input"] = "2025〜1990"
+        st.session_state.pending_year_text = generate_year_text()
         st.rerun()
 
     if q_col3.button("すべて選択", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = True
-        st.session_state["_next_year_input"] = "2025〜1965"
+        st.session_state.pending_year_text = generate_year_text()
         st.rerun()
         
     if q_col4.button("すべてクリア", use_container_width=True):
         for y in all_years:
             st.session_state[f"setup_year_{y}"] = False
-        st.session_state["_next_year_input"] = ""
+        st.session_state.pending_year_text = generate_year_text()
         st.rerun()
 
     st.markdown("")
     num_cols = 6
     rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
     
+    def on_checkbox_change():
+        # チェックボックスが変更されたら、テキスト入力欄のペンディング値を更新する
+        st.session_state.pending_year_text = generate_year_text()
+
     for row_years in rows:
         cols_grid = st.columns(num_cols)
         for i, y in enumerate(row_years):
             with cols_grid[i]:
-                st.checkbox(f"{y}", value=st.session_state.get(f"setup_year_{y}", True), key=f"setup_year_{y}")
+                st.checkbox(f"{y}", value=st.session_state.get(f"setup_year_{y}", True), key=f"setup_year_{y}", on_change=on_checkbox_change)
 
     active_temp_years = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
     
@@ -466,9 +505,6 @@ else:
     with col_sub:
         st.subheader("🏟️ チーム編成ボード")
         
-        # -------------------------------------------------------------
-        # 野手陣の表示
-        # -------------------------------------------------------------
         st.markdown(f"### 【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】")
         batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
@@ -496,9 +532,6 @@ else:
 
         st.markdown("---")
 
-        # -------------------------------------------------------------
-        # 投手陣の表示（「投」を排除し「先」「継」「抑」および番号のみ）
-        # -------------------------------------------------------------
         total_pitcher_slots = num_starting + num_relief + num_closer
         st.markdown(f"### 【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】")
         
@@ -672,7 +705,6 @@ else:
                             
                     assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
                     
-                    # 控えが選ばれている場合はポジション選択を完全に非表示にする
                     if assigned_bat_role.startswith("控"):
                         assigned_pos = "---"
                     else:
@@ -693,8 +725,6 @@ else:
                     elif role_type == "投手" and assigned_pitcher_role == "満員":
                         st.error("選べる投手起用法枠がありません。")
                     else:
-                        # 修正前： short_team_name = get_short_team_name(lottery['team'], lottery['year'])
-                        # 修正後： lottery['actual_team_name'] を渡すようにする
                         short_team_name = get_short_team_name(lottery['actual_team_name'], lottery['year'])
                         origin_text = f"{lottery['year']}{short_team_name}{chosen_player['rank_str']}"
                         
