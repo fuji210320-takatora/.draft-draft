@@ -300,9 +300,9 @@ if not st.session_state.game_started:
     st.markdown("### 🏟️ チーム編成の人数設定")
     c_p1, c_p2, c_p3 = st.columns(3)
     with c_p1:
-        num_starting = st.number_input("先発投手枠", min_value=1, max_value=6, value=1)
+        num_starting = st.number_input("先発投手枠", min_value=1, max_value=9, value=1)
     with c_p2:
-        num_relief = st.number_input("中継ぎ投手枠", min_value=0, max_value=7, value=1)
+        num_relief = st.number_input("中継ぎ投手枠", min_value=0, max_value=9, value=1)
     with c_p3:
         num_closer = st.number_input("抑え投手枠", min_value=0, max_value=5, value=1)
 
