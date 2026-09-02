@@ -24,17 +24,18 @@ st.markdown("""
         font-size: 18px !important;
     }
     
-    /* スマホ表示時、6列のチェックボックス群（対象年度選択）のみを3列グリッドに折り返す */
+    /* スマホ表示時、6列のチェックボックス群（対象年度選択）を3列に折り返す */
     @media (max-width: 768px) {
         div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
             gap: 4px !important;
             margin-bottom: 0px !important;
         }
         div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(6)) > div[data-testid="column"] {
-            width: auto !important;
-            flex: none !important;
+            flex: 0 0 31% !important;
+            max-width: 31% !important;
+            min-width: 80px !important;
             padding: 0px !important;
         }
     }
