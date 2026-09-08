@@ -3,6 +3,9 @@ import random
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image, ImageDraw, ImageFont
+import io
+import os
 
 # =====================================================================
 # 1. ページ全体の基本設定 ＆ 文字サイズ・見出しサイズ調整CSS
@@ -278,7 +281,144 @@ def fetch_draft_tokyo_data(team_name, year):
         return []
 
 # =====================================================================
-# 4. セッションステートの初期化 ＆ 同期ロジック
+# 4. オーダーカード画像生成関数 (Pillow)
+# =====================================================================
+def load_japanese_font(size):
+    font_candidates = [
+        "ipaexg.ttf", "ipag.ttf", "NotoSansCJK-Regular.ttc", "NotoSansJP-Regular.otf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "C:\\Windows\\Fonts\\msgothic.ttc", "C:\\Windows\\Fonts\\meiryo.ttc"
+    ]
+    for font_path in font_candidates:
+        try:
+            return ImageFont.truetype(font_path, size)
+        except IOError:
+            continue
+    try:
+        return ImageFont.load_default()
+    except:
+        return None
+
+def generate_order_card():
+    W, H = 850, 1350
+    bg_color = (13, 20, 36) # ダークネイビー
+    image = Image.new("RGB", (W, H), color=bg_color)
+    draw = ImageDraw.Drawimage = ImageDraw.Draw(image)
+    
+    font_title = load_japanese_font(28)
+    font_sub = load_japanese_font(15)
+    font_section = load_japanese_font(18)
+    font_bold = load_japanese_font(20)
+    font_small = load_japanese_font(16)
+    
+    # ヘッダー情報
+    draw.text((W/2, 45), "DRAFT × DRAFT", fill=(245, 158, 11), font=font_sub, anchor="mm")
+    draw.text((W/2, 85), "マイチーム", fill=(255, 255, 255), font=font_title, anchor="mm")
+    
+    min_y = min(selected_years)
+    max_y = max(selected_years)
+    meta_text = f"編成 {st.session_state.draft_count}/{max_drafts}  •  年度範囲 {min_y}〜{max_y}  •  パス {st.session_state.skip_count}回"
+    draw.text((W/2, 120), meta_text, fill=(148, 163, 184), font=font_sub, anchor="mm")
+    
+    current_y = 155
+    
+    def draw_section_header(title, y):
+        draw.text((45, y), title, fill=(255, 255, 255), font=font_section)
+        return y + 30
+
+    def draw_player_row(y, num_str, pos_str, name_str, origin_str):
+        row_h = 42
+        # 背景プレート
+        draw.rounded_rectangle([40, y, W - 40, y + row_h], radius=6, fill=(23, 33, 56))
+        
+        # 番号ボックス (オレンジ系)
+        draw.rounded_rectangle([52, y + 6, 92, y + row_h - 6], radius=4, fill=(217, 119, 6))
+        draw.text((72, y + row_h / 2), num_str, fill=(255, 255, 255), font=font_small, anchor="mm")
+        
+        # ポジションボックス (グレー系)
+        if pos_str and pos_str != "-":
+            draw.rounded_rectangle([104, y + 6, 144, y + row_h - 6], radius=4, fill=(51, 65, 85))
+            draw.text((124, y + row_h / 2), pos_str, fill=(255, 255, 255), font=font_small, anchor="mm")
+            
+        # 選手名
+        draw.text((165, y + row_h / 2), name_str, fill=(255, 255, 255), font=font_bold, anchor="lm")
+        
+        # 出自（右側）
+        if origin_str and origin_str != "---":
+            draw.text((W - 60, y + row_h / 2), origin_str, fill=(248, 113, 113), font=font_small, anchor="rm")
+            
+        return y + row_h + 8
+
+    # --- スタメン ---
+    current_y = draw_section_header("スタメン", current_y)
+    existing_batters = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
+    
+    batter_template_roles = [str(i) for i in range(1, 10)]
+    bench_count = max(0, num_batters - 9)
+    for i in range(1, bench_count + 1):
+        batter_template_roles.append(f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}")
+
+    for i in range(1, 10):
+        role = str(i)
+        if role in existing_batters:
+            p = existing_batters[role]
+            pos_s = get_position_short_name(p["守備位置"]) if p["守備位置"] != "---" else "-"
+            current_y = draw_player_row(current_y, role, pos_s, p["選手名"], p["出自"])
+        else:
+            current_y = draw_player_row(current_y, role, "-", "未定", "---")
+
+    # --- 控え野手 ---
+    if bench_count > 0:
+        current_y += 10
+        current_y = draw_section_header("控え野手", current_y)
+        for i in range(1, bench_count + 1):
+            role = f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}"
+            if role in existing_batters:
+                p = existing_batters[role]
+                current_y = draw_player_row(current_y, role, "-", p["選手名"], p["出自"])
+            else:
+                current_y = draw_player_row(current_y, role, "-", "未定", "---")
+
+    # --- 投手陣 ---
+    current_y += 10
+    current_y = draw_section_header("投手陣", current_y)
+    
+    pitcher_template = []
+    for i in range(1, num_starting + 1): pitcher_template.append(("先発", f"先{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_starting > 1 else "投"))
+    for i in range(1, num_relief + 1): pitcher_template.append(("中継ぎ", f"継{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_relief > 1 else "投"))
+    for i in range(1, num_closer + 1): pitcher_template.append(("抑え", f"抑{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_closer > 1 else "投"))
+
+    pitchers_by_role = {"先発": [], "中継ぎ": [], "抑え": []}
+    for p in st.session_state.my_team["pitchers"]:
+        if p["起用法"] in pitchers_by_role:
+            pitchers_by_role[p["起用法"]].append(p)
+
+    s_idx, r_idx, c_idx = 0, 0, 0
+    for role_cat, role_label in pitcher_template:
+        assigned = None
+        if role_cat == "先発" and s_idx < len(pitchers_by_role["先発"]):
+            assigned = pitchers_by_role["先発"][s_idx]; s_idx += 1
+        elif role_cat == "中継ぎ" and r_idx < len(pitchers_by_role["中継ぎ"]):
+            assigned = pitchers_by_role["中継ぎ"][r_idx]; r_idx += 1
+        elif role_cat == "抑え" and c_idx < len(pitchers_by_role["抑え"]):
+            assigned = pitchers_by_role["抑え"][c_idx]; c_idx += 1
+
+        if assigned:
+            current_y = draw_player_row(current_y, role_label, "投", assigned["選手名"], assigned["出自"])
+        else:
+            current_y = draw_player_row(current_y, role_label, "投", "未定", "---")
+
+    # フッタークレジット
+    draw.text((W/2, H - 35), "ドラフト×ドラフト メーカー (非公式ファンメイドツール)", fill=(100, 116, 139), font=font_sub, anchor="mm")
+
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    return buf.getvalue()
+
+# =====================================================================
+# 5. セッションステートの初期化 ＆ 同期ロジック
 # =====================================================================
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
@@ -298,7 +438,6 @@ for y in all_years:
         st.session_state[f"setup_year_{y}"] = True
 
 def generate_year_text():
-    """現在のチェックボックス状態から、綺麗にまとまった直接入力文字列を生成する"""
     active_y = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
     if not active_y:
         return ""
@@ -336,7 +475,6 @@ else:
     st.session_state.year_text_input = st.session_state.pending_year_text
 
 def update_checkboxes_from_text():
-    """テキストボックスに入力された文字列を解析してチェックボックスに反映する"""
     val = st.session_state.get("year_text_input", "")
     parsed_years = set()
     parts = val.replace("～", "~").replace("-", "~").replace("〜", "~").split(",")
@@ -367,7 +505,7 @@ def update_checkboxes_from_text():
     st.session_state.pending_year_text = generate_year_text()
 
 # =====================================================================
-# 5. スタート前画面
+# 6. スタート前画面
 # =====================================================================
 if not st.session_state.game_started:
     st.title("⚙️ 設定画面")
@@ -488,7 +626,7 @@ if not st.session_state.game_started:
         st.rerun()
 
 # =====================================================================
-# 6. メインゲーム画面
+# 7. メインゲーム画面
 # =====================================================================
 else:
     max_skips = st.session_state.max_skips
@@ -507,6 +645,19 @@ else:
     if st.sidebar.button("⚙️ 設定を変更してやり直す", use_container_width=True):
         st.session_state.game_started = False
         st.rerun()
+
+    # サイドバーにオーダーカードダウンロード機能を追加
+    if st.session_state.draft_count > 0:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📥 オーダーカード")
+        card_bytes = generate_order_card()
+        st.sidebar.download_button(
+            label="🖼️ 画像をダウンロード",
+            data=card_bytes,
+            file_name="draft_order_card.png",
+            mime="image/png",
+            use_container_width=True
+        )
 
     st.title("⚾ ドラフト×ドラフト")
     st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
@@ -574,6 +725,19 @@ else:
             else:
                 st.markdown(f"`{target_role}` 未選択 (---)")
 
+        # メイン画面左側の下部にもダウンロードボタンを配置
+        if st.session_state.draft_count > 0:
+            st.markdown("---")
+            st.subheader("📥 オーダーカード出力")
+            card_bytes_main = generate_order_card()
+            st.download_button(
+                label="🖼️ オーダーカード画像をダウンロード",
+                data=card_bytes_main,
+                file_name="draft_order_card.png",
+                mime="image/png",
+                use_container_width=True
+            )
+
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
         st.write(f"**指名完了数: {st.session_state.draft_count} / {max_drafts} 回**")
@@ -597,6 +761,18 @@ else:
 
         if st.session_state.draft_count >= max_drafts:
             st.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
+            
+            # 完了時の大きく目立つダウンロードボタン
+            st.markdown("### 🏆 作成完了！オーダーカードを保存しよう")
+            final_card_bytes = generate_order_card()
+            st.download_button(
+                label="📥 オーダーカード画像（PNG）をダウンロード",
+                data=final_card_bytes,
+                file_name="draft_order_card.png",
+                mime="image/png",
+                use_container_width=True
+            )
+            
             if st.button("もう一度最初から設定し直す", use_container_width=True):
                 st.session_state.game_started = False
                 st.rerun()
@@ -710,13 +886,13 @@ else:
                     
                     bench_max = max(0, num_batters - 9)
                     for i in range(1, bench_max + 1):
-                        role_name = "控" if bench_max == 1 else f"控{i}"
+                        role_name = f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}"
                         if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                             
                     assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
                     
-                    if assigned_bat_role.startswith("控"):
+                    if "控" in assigned_bat_role:
                         assigned_pos = "---"
                     else:
                         used_positions = [b["守備位置"] for b in st.session_state.my_team["batters"] if b["守備位置"] != "---"]
@@ -731,13 +907,15 @@ else:
                 
                 if st.button("この選手を決定して登録！", type="primary", use_container_width=True):
                     chosen_player = player_options[selected_key]
-                    if role_type == "野手" and (current_batters_count >= num_batters or assigned_bat_role == "満員" or (not assigned_bat_role.startswith("控") and assigned_pos == "すべてのポジションが埋まっています")):
+                    if role_type == "野手" and (current_batters_count >= num_batters or assigned_bat_role == "満員" or (not "控" in assigned_bat_role and assigned_pos == "すべてのポジションが埋まっています")):
                         st.error("野手枠が上限に達しているか、選べる打順・ポジションがありません。")
                     elif role_type == "投手" and assigned_pitcher_role == "満員":
                         st.error("選べる投手起用法枠がありません。")
                     else:
                         short_team_name = get_short_team_name(lottery['actual_team_name'], lottery['year'])
-                        origin_text = f"{lottery['year']}{short_team_name}{chosen_player['rank_str']}"
+                        # 出自の表記を合わせる (例: '18 広島・1位)
+                        y_str = str(lottery['year'])[-2:]
+                        origin_text = f"'{y_str} {short_team_name}・{chosen_player['rank_str']}"
                         
                         if role_type == "野手":
                             st.session_state.my_team["batters"].append({"打順/役割": assigned_bat_role, "守備位置": assigned_pos, "選手名": chosen_player["name"], "出自": origin_text})
