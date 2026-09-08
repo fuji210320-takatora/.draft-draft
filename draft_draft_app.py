@@ -159,8 +159,7 @@ def get_short_team_name(team_name, year):
         elif 1974 <= year <= 2005: return "ヤクルト"
         else: return "ヤクルト"
     if "広島" in team_name:
-        if 1965 <= year <= 1967: return "広島"
-        else: return "広島"
+        return "広島"
     if "DeNA" in team_name or "横浜" in team_name or "大洋" in team_name:
         if 1965 <= year <= 1978: return "大洋"
         elif 1979 <= year <= 1991: return "大洋"
@@ -199,14 +198,13 @@ def get_position_short_name(pos):
     return mapping.get(pos, pos)
 
 def get_position_border_color(pos):
-    # 捕手: 水色, 内野手: 黄色, 外野手: 緑
     if pos == "捕手":
         return "#38bdf8"
     elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
         return "#facc15"
     elif pos in ["左翼手", "中堅手", "右翼手"]:
         return "#4ade80"
-    return "#cbd5e1" # その他（投手や指名打者など）
+    return "#cbd5e1"
 
 # =====================================================================
 # 3. draft.tokyo スクレイピング関数
@@ -224,7 +222,7 @@ def fetch_draft_tokyo_data(team_name, year):
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = response.apparent_encoding
+        response.encoding = response.apparent_encoding or "utf-8"
         if response.status_code != 200:
             return []
             
@@ -355,14 +353,14 @@ def update_checkboxes_from_text():
                     for y in range(min(s, e), max(s, e) + 1):
                         if 1965 <= y <= 2025:
                             parsed_years.add(y)
-            except:
+            except Exception:
                 pass
         else:
             try:
                 y = int(part)
                 if 1965 <= y <= 2025:
                     parsed_years.add(y)
-            except:
+            except Exception:
                 pass
     
     for y in all_years:
@@ -517,7 +515,6 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # オーダーカード風の黒背景コンテナ
         st.markdown("""
         <div class="order-card-container">
         <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
@@ -525,13 +522,10 @@ else:
         
         st.markdown(f"<span style='color: #ffffff;'>**【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】**</span>", unsafe_allow_html=True)
         
-        batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
+        batter_template_roles = [f"{i}" for i in range(1, 10)]
         for i in range(1, bench_count + 1):
-            if bench_count == 1:
-                batter_template_roles.append("控")
-            else:
-                batter_template_roles.append(f"控{i}")
+            batter_template_roles.append("控" if bench_count == 1 else f"控{i}")
 
         existing_batters_dict = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
         
@@ -721,7 +715,7 @@ else:
                     
                     bench_max = max(0, num_batters - 9)
                     for i in range(1, bench_max + 1):
-                        role_name = f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}"
+                        role_name = "控" if bench_max == 1 else f"控{i}"
                         if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                             
