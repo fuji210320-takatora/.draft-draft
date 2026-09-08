@@ -516,7 +516,7 @@ else:
         # 野手陣セクション
         board_html += f'<div style="color: #ffffff; margin-bottom: 6px; margin-top: 10px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>'
         
-        batter_template_roles = [f"{i}" for i in range(1, 10)]
+        batter_template_roles = [str(i) for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
         for i in range(1, bench_count + 1):
             if bench_count == 1:
@@ -606,7 +606,7 @@ else:
 
         board_html += "</div>"
         
-        # まとめて安全にレンダリング
+        # まとめて安全にHTMLとしてレンダリング
         st.markdown(board_html, unsafe_allow_html=True)
 
     with col_main:
@@ -739,7 +739,7 @@ else:
                     
                     available_batter_roles = []
                     for i in range(1, 10):
-                        role_name = f"{i}"
+                        role_name = str(i)
                         if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                     
