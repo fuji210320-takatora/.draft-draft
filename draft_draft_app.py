@@ -20,15 +20,6 @@ st.markdown("""
     h2 { font-size: 22px !important; }
     h3 { font-size: 18px !important; }
 
-    /* チーム編成ボード：オーダーカード全体の背景を黒にする */
-    .order-card-container {
-        background: #000000;
-        border: 1px solid #333333;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
     /* スマホ表示時、年度選択のチェックボックス群を3列グリッドに折り返す */
     @media (max-width: 768px) {
         div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) {
@@ -200,11 +191,11 @@ def get_position_short_name(pos):
 
 def get_position_border_color(pos):
     if pos == "捕手":
-        return "#0284c7"
+        return "#0284c7" # 青系
     elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
-        return "#ca8a04"
+        return "#ca8a04" # 黄・オレンジ系
     elif pos in ["左翼手", "中堅手", "右翼手"]:
-        return "#16a34a"
+        return "#16a34a" # 緑系
     return "#000000"
 
 # =====================================================================
@@ -516,12 +507,14 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # ボード全体を囲むコンテナを開く（黒背景）
-        st.markdown('<div class="order-card-container">', unsafe_allow_html=True)
-        st.markdown('<h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>', unsafe_allow_html=True)
-        
+        # 完全に独立した黒背景のカードコンテナを作成
+        board_html = """
+        <div style="background-color: #000000; border: 1px solid #333333; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
+            <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
+        """
+
         # 野手陣セクション
-        st.markdown(f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>', unsafe_allow_html=True)
+        board_html += f'<div style="color: #ffffff; margin-bottom: 6px; margin-top: 10px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>'
         
         batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
@@ -539,7 +532,7 @@ else:
                 pos_border_col = get_position_border_color(b['守備位置'])
                 pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
                 
-                row_html = f"""
+                board_html += f"""
                 <div style='background: #ffffff; border: 1px solid #cccccc; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
@@ -550,7 +543,7 @@ else:
                 </div>
                 """
             else:
-                row_html = f"""
+                board_html += f"""
                 <div style='background: #ffffff; border: 1px solid #cccccc; color: #555555; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
@@ -559,13 +552,12 @@ else:
                     </span>
                 </div>
                 """
-            st.markdown(row_html, unsafe_allow_html=True)
 
-        st.markdown('<hr style="border-color: #333333; margin: 15px 0;">', unsafe_allow_html=True)
+        board_html += '<hr style="border-color: #333333; margin: 15px 0;">'
 
         # 投手陣セクション
         total_pitcher_slots = num_starting + num_relief + num_closer
-        st.markdown(f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>', unsafe_allow_html=True)
+        board_html += f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>'
         
         pitcher_template_roles = []
         for i in range(1, num_starting + 1): 
@@ -591,7 +583,7 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                p_row_html = f"""
+                board_html += f"""
                 <div style='background: #ffffff; border: 1px solid #cccccc; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
@@ -602,7 +594,7 @@ else:
                 </div>
                 """
             else:
-                p_row_html = f"""
+                board_html += f"""
                 <div style='background: #ffffff; border: 1px solid #cccccc; color: #555555; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
@@ -611,10 +603,11 @@ else:
                     </span>
                 </div>
                 """
-            st.markdown(p_row_html, unsafe_allow_html=True)
 
-        # ボード全体を囲むコンテナを閉じる
-        st.markdown('</div>', unsafe_allow_html=True)
+        board_html += "</div>"
+        
+        # まとめて安全にレンダリング
+        st.markdown(board_html, unsafe_allow_html=True)
 
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
