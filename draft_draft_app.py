@@ -516,12 +516,12 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # ボード全体のHTMLを1つの変数にまとめて出力する（HTML構造の破綻を防ぐため）
-        board_html = '<div class="order-card-container">'
-        board_html += '<h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>'
+        # ボード全体を囲むコンテナを開く
+        st.markdown('<div class="order-card-container">', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>', unsafe_allow_html=True)
         
         # 野手陣セクション
-        board_html += f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>'
+        st.markdown(f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>', unsafe_allow_html=True)
         
         batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
@@ -539,7 +539,7 @@ else:
                 pos_border_col = get_position_border_color(b['守備位置'])
                 pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
                 
-                board_html += f"""
+                row_html = f"""
                 <div style='background: #1e1e1e; border: 1px solid #333333; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#ffffff; background:#333333;'>{target_role}</code> 
@@ -550,7 +550,7 @@ else:
                 </div>
                 """
             else:
-                board_html += f"""
+                row_html = f"""
                 <div style='background: #1e1e1e; border: 1px solid #333333; color: #888888; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#888888; background:#333333;'>{target_role}</code> 
@@ -559,12 +559,13 @@ else:
                     </span>
                 </div>
                 """
+            st.markdown(row_html, unsafe_allow_html=True)
 
-        board_html += '<hr style="border-color: #333333; margin: 15px 0;">'
+        st.markdown('<hr style="border-color: #333333; margin: 15px 0;">', unsafe_allow_html=True)
 
         # 投手陣セクション
         total_pitcher_slots = num_starting + num_relief + num_closer
-        board_html += f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>'
+        st.markdown(f'<div style="color: #ffffff; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>', unsafe_allow_html=True)
         
         pitcher_template_roles = []
         for i in range(1, num_starting + 1): 
@@ -590,7 +591,7 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                board_html += f"""
+                p_row_html = f"""
                 <div style='background: #1e1e1e; border: 1px solid #333333; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#ffffff; background:#333333;'>{target_role}</code> 
@@ -601,7 +602,7 @@ else:
                 </div>
                 """
             else:
-                board_html += f"""
+                p_row_html = f"""
                 <div style='background: #1e1e1e; border: 1px solid #333333; color: #888888; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
                         <code style='color:#888888; background:#333333;'>{target_role}</code> 
@@ -610,9 +611,10 @@ else:
                     </span>
                 </div>
                 """
+            st.markdown(p_row_html, unsafe_allow_html=True)
 
-        board_html += '</div>'
-        st.markdown(board_html, unsafe_allow_html=True)
+        # ボード全体を囲むコンテナを閉じる
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
