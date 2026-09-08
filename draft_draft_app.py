@@ -3,31 +3,41 @@ import random
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, ImageDraw, ImageFont
-import io
-import os
-import urllib.request
 
 # =====================================================================
-# 1. ページ全体の基本設定 ＆ 文字サイズ・見出しサイズ調整CSS
+# 1. ページ全体の基本設定 ＆ スタイリッシュなダークテーマCSS
 # =====================================================================
 st.set_page_config(page_title="ドラフト×ドラフト", layout="wide")
 
 st.markdown("""
 <style>
+    /* 全体の背景と文字色 */
     html, body, [class*="css"] {
         font-size: 15px; 
     }
-    h1 {
-        font-size: 26px !important;
-    }
-    h2 {
-        font-size: 22px !important;
-    }
-    h3 {
-        font-size: 18px !important;
-    }
     
+    /* ヘッダーサイズ調整 */
+    h1 { font-size: 26px !important; }
+    h2 { font-size: 22px !important; }
+    h3 { font-size: 18px !important; }
+
+    /* メインエリア全体をダークトーンの落ち着いた雰囲気に寄せる */
+    .stApp {
+        background-color: #0d1424;
+        color: #f8fafc;
+    }
+
+    /* サイドバーの背景色調整 */
+    section[data-testid="stSidebar"] {
+        background-color: #111827;
+    }
+
+    /* チーム編成ボードなどのカード風コンテナ（見た目をオーダーカードっぽく統一） */
+    div.element-container:has(> .stMarkdown) {
+        color: #f8fafc;
+    }
+
+    /* スマホ表示時、年度選択のチェックボックス群を3列グリッドに折り返す */
     @media (max-width: 768px) {
         div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) {
             display: grid !important;
@@ -271,154 +281,7 @@ def fetch_draft_tokyo_data(team_name, year):
         return []
 
 # =====================================================================
-# 4. オーダーカード画像生成関数 (Pillow - 確実な日本語フォント対応)
-# =====================================================================
-@st.cache_resource
-def get_japanese_font(size):
-    font_filename = "ipaexg.ttf"
-    # フォントファイルがない場合は、IPAexゴシックを自動ダウンロードする
-    if not os.path.exists(font_filename):
-        try:
-            font_url = "https://github.com/google/fonts/raw/main/ofl/ipaexg/ipaexg.ttf"
-            urllib.request.urlretrieve(font_url, font_filename)
-        except Exception:
-            pass
-
-    font_candidates = [
-        font_filename,
-        "ipaexg.ttf", "ipag.ttf",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
-        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
-        "C:\\Windows\\Fonts\\msgothic.ttc", "C:\\Windows\\Fonts\\meiryo.ttc"
-    ]
-    
-    for font_path in font_candidates:
-        if os.path.exists(font_path):
-            try:
-                return ImageFont.truetype(font_path, size)
-            except IOError:
-                continue
-    try:
-        return ImageFont.load_default()
-    except:
-        return None
-
-def generate_order_card():
-    W, H = 850, 1350
-    bg_color = (13, 20, 36) # ダークネイビー
-    image = Image.new("RGB", (W, H), color=bg_color)
-    draw = ImageDraw.Draw(image)
-    
-    font_title = get_japanese_font(28)
-    font_sub = get_japanese_font(15)
-    font_section = get_japanese_font(18)
-    font_bold = get_japanese_font(20)
-    font_small = get_japanese_font(16)
-    
-    # ヘッダー情報
-    draw.text((W/2, 45), "DRAFT × DRAFT", fill=(245, 158, 11), font=font_sub, anchor="mm")
-    draw.text((W/2, 85), "マイチーム", fill=(255, 255, 255), font=font_title, anchor="mm")
-    
-    min_y = min(selected_years)
-    max_y = max(selected_years)
-    meta_text = f"編成 {st.session_state.draft_count}/{max_drafts}  •  年度範囲 {min_y}〜{max_y}  •  パス {st.session_state.skip_count}回"
-    draw.text((W/2, 120), meta_text, fill=(148, 163, 184), font=font_sub, anchor="mm")
-    
-    current_y = 155
-    
-    def draw_section_header(title, y):
-        draw.text((45, y), title, fill=(255, 255, 255), font=font_section)
-        return y + 30
-
-    def draw_player_row(y, num_str, pos_str, name_str, origin_str):
-        row_h = 42
-        # 背景プレート
-        draw.rounded_rectangle([40, y, W - 40, y + row_h], radius=6, fill=(23, 33, 56))
-        
-        # 番号ボックス (オレンジ系)
-        draw.rounded_rectangle([52, y + 6, 92, y + row_h - 6], radius=4, fill=(217, 119, 6))
-        draw.text((72, y + row_h / 2), num_str, fill=(255, 255, 255), font=font_small, anchor="mm")
-        
-        # ポジションボックス (グレー系)
-        if pos_str and pos_str != "-":
-            draw.rounded_rectangle([104, y + 6, 144, y + row_h - 6], radius=4, fill=(51, 65, 85))
-            draw.text((124, y + row_h / 2), pos_str, fill=(255, 255, 255), font=font_small, anchor="mm")
-            
-        # 選手名
-        draw.text((165, y + row_h / 2), name_str, fill=(255, 255, 255), font=font_bold, anchor="lm")
-        
-        # 出自（右側）
-        if origin_str and origin_str != "---":
-            draw.text((W - 60, y + row_h / 2), origin_str, fill=(248, 113, 113), font=font_small, anchor="rm")
-            
-        return y + row_h + 8
-
-    # --- スタメン ---
-    current_y = draw_section_header("スタメン", current_y)
-    existing_batters = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
-    
-    bench_count = max(0, num_batters - 9)
-
-    for i in range(1, 10):
-        role = str(i)
-        if role in existing_batters:
-            p = existing_batters[role]
-            pos_s = get_position_short_name(p["守備位置"]) if p["守備位置"] != "---" else "-"
-            current_y = draw_player_row(current_y, role, pos_s, p["選手名"], p["出自"])
-        else:
-            current_y = draw_player_row(current_y, role, "-", "未定", "---")
-
-    # --- 控え野手 ---
-    if bench_count > 0:
-        current_y += 10
-        current_y = draw_section_header("控え野手", current_y)
-        for i in range(1, bench_count + 1):
-            role = f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}"
-            if role in existing_batters:
-                p = existing_batters[role]
-                current_y = draw_player_row(current_y, role, "-", p["選手名"], p["出自"])
-            else:
-                current_y = draw_player_row(current_y, role, "-", "未定", "---")
-
-    # --- 投手陣 ---
-    current_y += 10
-    current_y = draw_section_header("投手陣", current_y)
-    
-    pitcher_template = []
-    for i in range(1, num_starting + 1): pitcher_template.append(("先発", f"先{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_starting > 1 else "投"))
-    for i in range(1, num_relief + 1): pitcher_template.append(("中継ぎ", f"継{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_relief > 1 else "投"))
-    for i in range(1, num_closer + 1): pitcher_template.append(("抑え", f"抑{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}" if num_closer > 1 else "投"))
-
-    pitchers_by_role = {"先発": [], "中継ぎ": [], "抑え": []}
-    for p in st.session_state.my_team["pitchers"]:
-        if p["起用法"] in pitchers_by_role:
-            pitchers_by_role[p["起用法"]].append(p)
-
-    s_idx, r_idx, c_idx = 0, 0, 0
-    for role_cat, role_label in pitcher_template:
-        assigned = None
-        if role_cat == "先発" and s_idx < len(pitchers_by_role["先発"]):
-            assigned = pitchers_by_role["先発"][s_idx]; s_idx += 1
-        elif role_cat == "中継ぎ" and r_idx < len(pitchers_by_role["中継ぎ"]):
-            assigned = pitchers_by_role["中継ぎ"][r_idx]; r_idx += 1
-        elif role_cat == "抑え" and c_idx < len(pitchers_by_role["抑え"]):
-            assigned = pitchers_by_role["抑え"][c_idx]; c_idx += 1
-
-        if assigned:
-            current_y = draw_player_row(current_y, role_label, "投", assigned["選手名"], assigned["出自"])
-        else:
-            current_y = draw_player_row(current_y, role_label, "投", "未定", "---")
-
-    # フッタークレジット
-    draw.text((W/2, H - 35), "ドラフト×ドラフト メーカー (非公式ファンメイドツール)", fill=(100, 116, 139), font=font_sub, anchor="mm")
-
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    return buf.getvalue()
-
-# =====================================================================
-# 5. セッションステートの初期化 ＆ 同期ロジック
+# 4. セッションステートの初期化 ＆ 同期ロジック
 # =====================================================================
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
@@ -505,7 +368,7 @@ def update_checkboxes_from_text():
     st.session_state.pending_year_text = generate_year_text()
 
 # =====================================================================
-# 6. スタート前画面
+# 5. スタート前画面
 # =====================================================================
 if not st.session_state.game_started:
     st.title("⚙️ 設定画面")
@@ -626,7 +489,7 @@ if not st.session_state.game_started:
         st.rerun()
 
 # =====================================================================
-# 7. メインゲーム画面
+# 6. メインゲーム画面
 # =====================================================================
 else:
     max_skips = st.session_state.max_skips
@@ -646,27 +509,18 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    if st.session_state.draft_count > 0:
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("📥 オーダーカード")
-        card_bytes = generate_order_card()
-        st.sidebar.download_button(
-            label="🖼️ 画像をダウンロード",
-            data=card_bytes,
-            file_name="draft_order_card.png",
-            mime="image/png",
-            use_container_width=True
-        )
-
     st.title("⚾ ドラフト×ドラフト")
-    st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
+    st.markdown(f"選択中年度: <code style='color: #f59e0b;'>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        st.subheader("🏟️ チーム編成ボード")
+        st.markdown("""
+        <div style="background-color: #172138; padding: 20px; border-radius: 10px; border: 1px solid #1e293b;">
+        <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #d97706; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
+        """, unsafe_allow_html=True)
         
-        st.markdown(f"### 【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】")
+        st.markdown(f"**【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】**")
         batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
         for i in range(1, bench_count + 1):
@@ -681,20 +535,20 @@ else:
             if target_role in existing_batters_dict:
                 b = existing_batters_dict[target_role]
                 if target_role.startswith("控"):
-                    st.markdown(f"`{target_role}` **{b['選手名']}** ({b['出自']})")
+                    st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#d97706;'>{target_role}</code> <b>{b['選手名']}</b></span><span style='color:#f87171; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
                 else:
                     pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
-                    st.markdown(f"`{target_role}` `{pos_short}` **{b['選手名']}** ({b['出自']})")
+                    st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#d97706;'>{target_role}</code> <code style='background:#334155; color:#fff;'>{pos_short}</code> <b>{b['選手名']}</b></span><span style='color:#f87171; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
             else:
                 if target_role.startswith("控"):
-                    st.markdown(f"`{target_role}` 未選択 (---)")
+                    st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; color: #64748b;'><code>{target_role}</code> 未選択 (---)</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"`{target_role}` `-` 未選択 (---)")
+                    st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; color: #64748b;'><code>{target_role}</code> <code>-</code> 未選択 (---)</div>", unsafe_allow_html=True)
 
-        st.markdown("---")
+        st.markdown("<hr style='border-color: #2e3b55;'>", unsafe_allow_html=True)
 
         total_pitcher_slots = num_starting + num_relief + num_closer
-        st.markdown(f"### 【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】")
+        st.markdown(f"**【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】**")
         
         pitcher_template_roles = []
         for i in range(1, num_starting + 1): 
@@ -720,21 +574,11 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                st.markdown(f"`{target_role}` **{assigned_player['選手名']}** ({assigned_player['出自']})")
+                st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#d97706;'>{target_role}</code> <code style='background:#334155; color:#fff;'>投</code> <b>{assigned_player['選手名']}</b></span><span style='color:#f87171; font-size:13px;'>({assigned_player['出自']})</span></div>", unsafe_allow_html=True)
             else:
-                st.markdown(f"`{target_role}` 未選択 (---)")
+                st.markdown(f"<div style='background: #111827; padding: 6px 10px; margin: 4px 0; border-radius: 6px; color: #64748b;'><code>{target_role}</code> <code>投</code> 未選択 (---)</div>", unsafe_allow_html=True)
 
-        if st.session_state.draft_count > 0:
-            st.markdown("---")
-            st.subheader("📥 オーダーカード出力")
-            card_bytes_main = generate_order_card()
-            st.download_button(
-                label="🖼️ オーダーカード画像をダウンロード",
-                data=card_bytes_main,
-                file_name="draft_order_card.png",
-                mime="image/png",
-                use_container_width=True
-            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
@@ -759,17 +603,6 @@ else:
 
         if st.session_state.draft_count >= max_drafts:
             st.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
-            
-            st.markdown("### 🏆 作成完了！オーダーカードを保存しよう")
-            final_card_bytes = generate_order_card()
-            st.download_button(
-                label="📥 オーダーカード画像（PNG）をダウンロード",
-                data=final_card_bytes,
-                file_name="draft_order_card.png",
-                mime="image/png",
-                use_container_width=True
-            )
-            
             if st.button("もう一度最初から設定し直す", use_container_width=True):
                 st.session_state.game_started = False
                 st.rerun()
@@ -850,7 +683,7 @@ else:
                 def highlight_special_status(row):
                     status = lottery["players"][row.name]["status"]
                     if status != "入団":
-                        return ['color: #888888; background-color: #f9f9f9'] * len(row)
+                        return ['color: #888888; background-color: #111827'] * len(row)
                     return [''] * len(row)
 
                 styled_df = players_df.style.apply(highlight_special_status, axis=1)
