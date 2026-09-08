@@ -517,7 +517,7 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # オーダーカード全体背景：黒
+        # オーダーカード全体（コンテナ開始）
         st.markdown("""
         <div class="order-card-container">
         <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
@@ -613,6 +613,7 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
 
+        # オーダーカード全体（コンテナ終了）
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_main:
