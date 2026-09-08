@@ -200,12 +200,12 @@ def get_position_short_name(pos):
 
 def get_position_border_color(pos):
     if pos == "捕手":
-        return "#38bdf8"
+        return "#0284c7"
     elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
-        return "#facc15"
+        return "#ca8a04"
     elif pos in ["左翼手", "中堅手", "右翼手"]:
-        return "#4ade80"
-    return "#cbd5e1"
+        return "#16a34a"
+    return "#000000"
 
 # =====================================================================
 # 3. draft.tokyo スクレイピング関数
@@ -516,7 +516,7 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # ボード全体を囲むコンテナを開く
+        # ボード全体を囲むコンテナを開く（黒背景）
         st.markdown('<div class="order-card-container">', unsafe_allow_html=True)
         st.markdown('<h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>', unsafe_allow_html=True)
         
@@ -540,22 +540,22 @@ else:
                 pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
                 
                 row_html = f"""
-                <div style='background: #1e1e1e; border: 1px solid #333333; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                <div style='background: #ffffff; border: 1px solid #cccccc; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
-                        <code style='color:#ffffff; background:#333333;'>{target_role}</code> 
-                        <span style='border: 2px solid {pos_border_col}; background: #000000; color: #ffffff; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>{pos_short}</span> 
-                        <b style='color:#ffffff; margin-left: 6px;'>{b['選手名']}</b>
+                        <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 2px solid {pos_border_col}; background: #ffffff; color: #000000; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>{pos_short}</span> 
+                        <b style='color:#000000; margin-left: 6px;'>{b['選手名']}</b>
                     </span>
-                    <span style='color:#aaaaaa; font-size:13px;'>({b['出自']})</span>
+                    <span style='color:#555555; font-size:13px;'>({b['出自']})</span>
                 </div>
                 """
             else:
                 row_html = f"""
-                <div style='background: #1e1e1e; border: 1px solid #333333; color: #888888; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                <div style='background: #ffffff; border: 1px solid #cccccc; color: #555555; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
-                        <code style='color:#888888; background:#333333;'>{target_role}</code> 
-                        <span style='border: 2px solid #555555; background: #000000; color: #888888; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>-</span> 
-                        <span style='margin-left: 6px;'>未選択 (---)</span>
+                        <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 1px solid #000000; background: #ffffff; color: #000000; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>-</span> 
+                        <span style='margin-left: 6px; color: #555555;'>未選択 (---)</span>
                     </span>
                 </div>
                 """
@@ -592,22 +592,22 @@ else:
 
             if assigned_player:
                 p_row_html = f"""
-                <div style='background: #1e1e1e; border: 1px solid #333333; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                <div style='background: #ffffff; border: 1px solid #cccccc; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
-                        <code style='color:#ffffff; background:#333333;'>{target_role}</code> 
-                        <span style='border: 2px solid #cbd5e1; background: #000000; color: #ffffff; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>投</span> 
-                        <b style='color:#ffffff; margin-left: 6px;'>{assigned_player['選手名']}</b>
+                        <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 2px solid #000000; background: #ffffff; color: #000000; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>投</span> 
+                        <b style='color:#000000; margin-left: 6px;'>{assigned_player['選手名']}</b>
                     </span>
-                    <span style='color:#aaaaaa; font-size:13px;'>({assigned_player['出自']})</span>
+                    <span style='color:#555555; font-size:13px;'>({assigned_player['出自']})</span>
                 </div>
                 """
             else:
                 p_row_html = f"""
-                <div style='background: #1e1e1e; border: 1px solid #333333; color: #888888; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                <div style='background: #ffffff; border: 1px solid #cccccc; color: #555555; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
                     <span>
-                        <code style='color:#888888; background:#333333;'>{target_role}</code> 
-                        <span style='border: 2px solid #555555; background: #000000; color: #888888; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>投</span> 
-                        <span style='margin-left: 6px;'>未選択 (---)</span>
+                        <code style='color:#000000; background:#ffffff; border: 1px solid #000000; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 1px solid #000000; background: #ffffff; color: #000000; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>投</span> 
+                        <span style='margin-left: 6px; color: #555555;'>未選択 (---)</span>
                     </span>
                 </div>
                 """
