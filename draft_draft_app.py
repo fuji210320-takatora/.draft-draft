@@ -146,7 +146,23 @@ if not st.session_state.game_started:
     num_sub_batters = st.number_input("控え野手の追加人数", 0, 20, 0)
     total_batters = 9 + num_sub_batters
     total_required = num_starting + num_relief + num_closer + total_batters
-    
+
+    st.subheader("対象年の選択")
+    col_ctrl1, col_ctrl2 = st.columns(2)
+    with col_ctrl1:
+        if st.button("すべて選択"):
+            for y in all_years: st.session_state[f"setup_year_{y}"] = True
+            st.rerun()
+    with col_ctrl2:
+        if st.button("すべて解除"):
+            for y in all_years: st.session_state[f"setup_year_{y}"] = False
+            st.rerun()
+
+    cols = st.columns(5)
+    for idx, y in enumerate(all_years):
+        with cols[idx % 5]:
+            st.checkbox(f"{y}年", key=f"setup_year_{y}")
+
     if st.button("🚀 ゲームスタート！", type="primary", use_container_width=True):
         st.session_state.selected_years = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
         st.session_state.max_skips = float("inf")
@@ -254,31 +270,35 @@ else:
     with col_main:
         if st.button("🎲 抽選する", type="primary", use_container_width=True):
             pool = [(t, y) for y in st.session_state.selected_years for t in TEAMS_LIST if get_draft_tokyo_team_names(t, y)]
-            chosen_team, chosen_year = random.choice(pool)
-            names = get_draft_tokyo_team_names(chosen_team, chosen_year)
-            st.session_state.current_lottery = {
-                "team": chosen_team, "actual_team_name": names[0] if names else chosen_team,
-                "year": chosen_year, "players": fetch_draft_tokyo_data(chosen_team, chosen_year)
-            }
-            st.rerun()
+            if pool:
+                chosen_team, chosen_year = random.choice(pool)
+                names = get_draft_tokyo_team_names(chosen_team, chosen_year)
+                st.session_state.current_lottery = {
+                    "team": chosen_team, "actual_team_name": names[0] if names else chosen_team,
+                    "year": chosen_year, "players": fetch_draft_tokyo_data(chosen_team, chosen_year)
+                }
+                st.rerun()
 
         if st.session_state.current_lottery:
             lot = st.session_state.current_lottery
             st.info(f"✨ 抽選：{lot['year']}年 {lot['actual_team_name']}")
             opts = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']})": p for p in lot["players"]}
-            sel_key = st.selectbox("選手選択", options=list(opts.keys()))
-            rtype = st.radio("タイプ", ["野手", "投手"], horizontal=True)
-            
-            b_role = st.selectbox("打順", [str(i) for i in range(1, 10)]) if rtype == "野手" else ""
-            pos = st.selectbox("ポジション", ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者"]) if rtype == "野手" else "-"
-            p_role = st.selectbox("投手起用法", ["先発", "中継ぎ", "抑え"]) if rtype == "投手" else ""
+            if opts:
+                sel_key = st.selectbox("選手選択", options=list(opts.keys()))
+                rtype = st.radio("タイプ", ["野手", "投手"], horizontal=True)
+                
+                b_role = st.selectbox("打順", [str(i) for i in range(1, 10)]) if rtype == "野手" else ""
+                pos = st.selectbox("ポジション", ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者"]) if rtype == "野手" else "-"
+                p_role = st.selectbox("投手起用法", ["先発", "中継ぎ", "抑え"]) if rtype == "投手" else ""
 
-            if st.button("登録！", type="primary", use_container_width=True):
-                p = opts[sel_key]
-                origin = f"'{str(lot['year'])[-2:]} {get_short_team_name(lot['actual_team_name'], lot['year'])}・{p['rank_str']}"
-                if rtype == "野手":
-                    st.session_state.my_team["batters"].append({"打順/役割": b_role, "守備位置": pos, "選手名": p["name"], "出自": origin})
-                else:
-                    st.session_state.my_team["pitchers"].append({"起用法": p_role, "選手名": p["name"], "出自": origin})
-                st.session_state.current_lottery = None
-                st.rerun()
+                if st.button("登録！", type="primary", use_container_width=True):
+                    p = opts[sel_key]
+                    origin = f"{str(lot['year'])[-2:]} {get_short_team_name(lot['actual_team_name'], lot['year'])}・{p['rank_str']}"
+                    if rtype == "野手":
+                        st.session_state.my_team["batters"].append({"打順/役割": b_role, "守備位置": pos, "選手名": p["name"], "出自": origin})
+                    else:
+                        st.session_state.my_team["pitchers"].append({"起用法": p_role, "選手名": p["name"], "出自": origin})
+                    st.session_state.current_lottery = None
+                    st.rerun()
+            else:
+                st.warning("この球団・年のデータが取得できませんでした。再度抽選してください。")
