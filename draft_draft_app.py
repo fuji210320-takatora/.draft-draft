@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import urllib.request
 
 # =====================================================================
 # 1. ページ全体の基本設定 ＆ 文字サイズ・見出しサイズ調整CSS
@@ -27,7 +28,6 @@ st.markdown("""
         font-size: 18px !important;
     }
     
-    /* スマホ表示時、年度選択のチェックボックス群を3列グリッドに折り返す */
     @media (max-width: 768px) {
         div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) {
             display: grid !important;
@@ -190,16 +190,9 @@ def get_short_team_name(team_name, year):
 
 def get_position_short_name(pos):
     mapping = {
-        "投手": "投",
-        "捕手": "捕",
-        "一塁手": "一",
-        "二塁手": "二",
-        "三塁手": "三",
-        "遊撃手": "遊",
-        "左翼手": "左",
-        "中堅手": "中",
-        "右翼手": "右",
-        "指名打者": "指"
+        "投手": "投", "捕手": "捕", "一塁手": "一", "二塁手": "二",
+        "三塁手": "三", "遊撃手": "遊", "左翼手": "左", "中堅手": "中",
+        "右翼手": "右", "指名打者": "指"
     }
     return mapping.get(pos, pos)
 
@@ -247,7 +240,6 @@ def fetch_draft_tokyo_data(team_name, year):
                 
             if len(cols) >= 2:
                 rank = cols[0]
-                
                 if 1998 <= year <= 2009:
                     pos = cols[1] if len(cols) > 1 else "---"
                     name = cols[2] if len(cols) > 2 else "---"
@@ -267,11 +259,9 @@ def fetch_draft_tokyo_data(team_name, year):
                 cat = "育成" if "育成" in rank else "支配下"
                 
                 player_entry = {
-                    "rank_str": rank,
-                    "name": name,
+                    "rank_str": rank, "name": name,
                     "pos": pos if pos in ["投手", "捕手", "内野手", "外野手"] else "---",
-                    "status": status,
-                    "category": cat
+                    "status": status, "category": cat
                 }
                 if player_entry not in players:
                     players.append(player_entry)
@@ -281,21 +271,34 @@ def fetch_draft_tokyo_data(team_name, year):
         return []
 
 # =====================================================================
-# 4. オーダーカード画像生成関数 (Pillow)
+# 4. オーダーカード画像生成関数 (Pillow - 確実な日本語フォント対応)
 # =====================================================================
-def load_japanese_font(size):
+@st.cache_resource
+def get_japanese_font(size):
+    font_filename = "ipaexg.ttf"
+    # フォントファイルがない場合は、IPAexゴシックを自動ダウンロードする
+    if not os.path.exists(font_filename):
+        try:
+            font_url = "https://github.com/google/fonts/raw/main/ofl/ipaexg/ipaexg.ttf"
+            urllib.request.urlretrieve(font_url, font_filename)
+        except Exception:
+            pass
+
     font_candidates = [
-        "ipaexg.ttf", "ipag.ttf", "NotoSansCJK-Regular.ttc", "NotoSansJP-Regular.otf",
+        font_filename,
+        "ipaexg.ttf", "ipag.ttf",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
         "C:\\Windows\\Fonts\\msgothic.ttc", "C:\\Windows\\Fonts\\meiryo.ttc"
     ]
+    
     for font_path in font_candidates:
-        try:
-            return ImageFont.truetype(font_path, size)
-        except IOError:
-            continue
+        if os.path.exists(font_path):
+            try:
+                return ImageFont.truetype(font_path, size)
+            except IOError:
+                continue
     try:
         return ImageFont.load_default()
     except:
@@ -305,13 +308,13 @@ def generate_order_card():
     W, H = 850, 1350
     bg_color = (13, 20, 36) # ダークネイビー
     image = Image.new("RGB", (W, H), color=bg_color)
-    draw = ImageDraw.Drawimage = ImageDraw.Draw(image)
+    draw = ImageDraw.Draw(image)
     
-    font_title = load_japanese_font(28)
-    font_sub = load_japanese_font(15)
-    font_section = load_japanese_font(18)
-    font_bold = load_japanese_font(20)
-    font_small = load_japanese_font(16)
+    font_title = get_japanese_font(28)
+    font_sub = get_japanese_font(15)
+    font_section = get_japanese_font(18)
+    font_bold = get_japanese_font(20)
+    font_small = get_japanese_font(16)
     
     # ヘッダー情報
     draw.text((W/2, 45), "DRAFT × DRAFT", fill=(245, 158, 11), font=font_sub, anchor="mm")
@@ -355,10 +358,7 @@ def generate_order_card():
     current_y = draw_section_header("スタメン", current_y)
     existing_batters = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
     
-    batter_template_roles = [str(i) for i in range(1, 10)]
     bench_count = max(0, num_batters - 9)
-    for i in range(1, bench_count + 1):
-        batter_template_roles.append(f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}")
 
     for i in range(1, 10):
         role = str(i)
@@ -646,7 +646,6 @@ else:
         st.session_state.game_started = False
         st.rerun()
 
-    # サイドバーにオーダーカードダウンロード機能を追加
     if st.session_state.draft_count > 0:
         st.sidebar.markdown("---")
         st.sidebar.subheader("📥 オーダーカード")
@@ -725,7 +724,6 @@ else:
             else:
                 st.markdown(f"`{target_role}` 未選択 (---)")
 
-        # メイン画面左側の下部にもダウンロードボタンを配置
         if st.session_state.draft_count > 0:
             st.markdown("---")
             st.subheader("📥 オーダーカード出力")
@@ -762,7 +760,6 @@ else:
         if st.session_state.draft_count >= max_drafts:
             st.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
             
-            # 完了時の大きく目立つダウンロードボタン
             st.markdown("### 🏆 作成完了！オーダーカードを保存しよう")
             final_card_bytes = generate_order_card()
             st.download_button(
@@ -913,7 +910,6 @@ else:
                         st.error("選べる投手起用法枠がありません。")
                     else:
                         short_team_name = get_short_team_name(lottery['actual_team_name'], lottery['year'])
-                        # 出自の表記を合わせる (例: '18 広島・1位)
                         y_str = str(lottery['year'])[-2:]
                         origin_text = f"'{y_str} {short_team_name}・{chosen_player['rank_str']}"
                         
