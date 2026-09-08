@@ -20,6 +20,15 @@ st.markdown("""
     h2 { font-size: 22px !important; }
     h3 { font-size: 18px !important; }
 
+    /* チーム編成ボード：オーダー部分の背景をすべて黒に */
+    .order-card-container {
+        background: #000000;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
     /* スマホ表示時、年度選択のチェックボックス群を3列グリッドに折り返す */
     @media (max-width: 768px) {
         div[data-testid="stHorizontalBlock"]:has(div[data-testid="stCheckbox"]) {
@@ -190,13 +199,14 @@ def get_position_short_name(pos):
     return mapping.get(pos, pos)
 
 def get_position_border_color(pos):
+    # 捕手: 水色, 内野手: 黄色, 外野手: 緑
     if pos == "捕手":
-        return "#0284c7" # 青系
+        return "#38bdf8"
     elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
-        return "#ca8a04" # 黄・オレンジ系
+        return "#facc15"
     elif pos in ["左翼手", "中堅手", "右翼手"]:
-        return "#16a34a" # 緑系
-    return "#cccccc"
+        return "#4ade80"
+    return "#cbd5e1" # その他（指名打者や控えなど）
 
 # =====================================================================
 # 3. draft.tokyo スクレイピング関数
@@ -507,16 +517,15 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # 黒背景を撤廃し、通常のフラットな枠組みのデザインに修正
-        board_html = """
-        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); background-color: #ffffff;">
-            <h3 style="margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; color: #1e293b;">🏟️ チーム編成ボード</h3>
-        """
-
-        # 野手陣セクション
-        board_html += f'<div style="color: #334155; margin-bottom: 6px; margin-top: 10px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>'
+        # オーダーカード風の黒背景コンテナ
+        st.markdown("""
+        <div class="order-card-container">
+        <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
+        """, unsafe_allow_html=True)
         
-        batter_template_roles = [str(i) for i in range(1, 10)]
+        st.markdown(f"<span style='color: #ffffff;'>**【野手陣 ({len(st.session_state.my_team['batters'])} / {num_batters}人)】**</span>", unsafe_allow_html=True)
+        
+        batter_template_roles = [f"{i}" for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
         for i in range(1, bench_count + 1):
             if bench_count == 1:
@@ -529,35 +538,22 @@ else:
         for target_role in batter_template_roles:
             if target_role in existing_batters_dict:
                 b = existing_batters_dict[target_role]
-                pos_border_col = get_position_border_color(b['守備位置'])
-                pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
-                
-                board_html += f"""
-                <div style='background: #f8fafc; border: 1px solid #e2e8f0; color: #0f172a; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
-                    <span>
-                        <code style='color:#334155; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
-                        <span style='border: 2px solid {pos_border_col}; background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>{pos_short}</span> 
-                        <b style='color:#0f172a; margin-left: 6px;'>{b['選手名']}</b>
-                    </span>
-                    <span style='color:#64748b; font-size:13px;'>({b['出自']})</span>
-                </div>
-                """
+                border_col = get_position_border_color(b['守備位置'])
+                if target_role.startswith("控"):
+                    st.markdown(f"<div style='background: #ffffff; border: 2px solid {border_col}; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <b style='color:#000000;'>{b['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
+                else:
+                    pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
+                    st.markdown(f"<div style='background: #ffffff; border: 2px solid {border_col}; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <code style='background:#e2e8f0; color:#000000;'>{pos_short}</code> <b style='color:#000000;'>{b['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
             else:
-                board_html += f"""
-                <div style='background: #ffffff; border: 1px solid #e2e8f0; color: #94a3b8; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
-                    <span>
-                        <code style='color:#64748b; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
-                        <span style='border: 1px solid #cbd5e1; background: #ffffff; color: #94a3b8; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>-</span> 
-                        <span style='margin-left: 6px; color: #94a3b8;'>未選択 (---)</span>
-                    </span>
-                </div>
-                """
+                if target_role.startswith("控"):
+                    st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #666666; padding: 6px 10px; margin: 4px 0; border-radius: 6px;'><code>{target_role}</code> 未選択 (---)</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #666666; padding: 6px 10px; margin: 4px 0; border-radius: 6px;'><code>{target_role}</code> <code>-</code> 未選択 (---)</div>", unsafe_allow_html=True)
 
-        board_html += '<hr style="border-color: #e2e8f0; margin: 15px 0;">'
+        st.markdown("<hr style='border-color: #333333;'>", unsafe_allow_html=True)
 
-        # 投手陣セクション
         total_pitcher_slots = num_starting + num_relief + num_closer
-        board_html += f'<div style="color: #334155; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>'
+        st.markdown(f"<span style='color: #ffffff;'>**【投手陣 ({len(st.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】**</span>", unsafe_allow_html=True)
         
         pitcher_template_roles = []
         for i in range(1, num_starting + 1): 
@@ -583,31 +579,11 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                board_html += f"""
-                <div style='background: #f8fafc; border: 1px solid #e2e8f0; color: #0f172a; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
-                    <span>
-                        <code style='color:#334155; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
-                        <span style='border: 2px solid #0284c7; background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>投</span> 
-                        <b style='color:#0f172a; margin-left: 6px;'>{assigned_player['選手名']}</b>
-                    </span>
-                    <span style='color:#64748b; font-size:13px;'>({assigned_player['出自']})</span>
-                </div>
-                """
+                st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <code style='background:#e2e8f0; color:#000000;'>投</code> <b style='color:#000000;'>{assigned_player['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({assigned_player['出自']})</span></div>", unsafe_allow_html=True)
             else:
-                board_html += f"""
-                <div style='background: #ffffff; border: 1px solid #e2e8f0; color: #94a3b8; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
-                    <span>
-                        <code style='color:#64748b; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
-                        <span style='border: 1px solid #cbd5e1; background: #ffffff; color: #94a3b8; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>投</span> 
-                        <span style='margin-left: 6px; color: #94a3b8;'>未選択 (---)</span>
-                    </span>
-                </div>
-                """
+                st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #666666; padding: 6px 10px; margin: 4px 0; border-radius: 6px;'><code>{target_role}</code> <code>投</code> 未選択 (---)</div>", unsafe_allow_html=True)
 
-        board_html += "</div>"
-        
-        # まとめて安全にHTMLとしてレンダリング
-        st.markdown(board_html, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_main:
         st.progress(st.session_state.draft_count / max_drafts)
@@ -739,7 +715,7 @@ else:
                     
                     available_batter_roles = []
                     for i in range(1, 10):
-                        role_name = str(i)
+                        role_name = f"{i}"
                         if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                     
