@@ -206,7 +206,19 @@ def get_position_border_color(pos):
         return "#facc15"
     elif pos in ["左翼手", "中堅手", "右翼手"]:
         return "#4ade80"
-    return "#cbd5e1" # その他（指名打者や控えなど）
+    return "#cbd5e1" # その他
+
+def get_position_text_color(pos):
+    # ポジション名の文字色（水色、黄色、緑、投手などは白や薄め）
+    if pos == "捕手":
+        return "#38bdf8"
+    elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
+        return "#facc15"
+    elif pos in ["左翼手", "中堅手", "右翼手"]:
+        return "#4ade80"
+    elif pos == "投手":
+        return "#f43f5e" # 投手は赤みピンクなど見やすく
+    return "#94a3b8"
 
 # =====================================================================
 # 3. draft.tokyo スクレイピング関数
@@ -539,12 +551,15 @@ else:
             if target_role in existing_batters_dict:
                 b = existing_batters_dict[target_role]
                 border_col = get_position_border_color(b['守備位置'])
+                pos_col = get_position_text_color(b['守備位置'])
+                
                 if target_role.startswith("控"):
-                    st.markdown(f"<div style='background: #ffffff; border: 2px solid {border_col}; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <b style='color:#000000;'>{b['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background: #000000; border: 2px solid {border_col}; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#ffffff; background:#1e293b;'>{target_role}</code> <b style='color:#ffffff;'>{b['選手名']}</b></span><span style='color:#94a3b8; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
                 else:
                     pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
-                    st.markdown(f"<div style='background: #ffffff; border: 2px solid {border_col}; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <code style='background:#e2e8f0; color:#000000;'>{pos_short}</code> <b style='color:#000000;'>{b['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background: #000000; border: 2px solid {border_col}; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#ffffff; background:#1e293b;'>{target_role}</code> <code style='background:#1e293b; color:{pos_col}; font-weight:bold;'>{pos_short}</code> <b style='color:#ffffff;'>{b['選手名']}</b></span><span style='color:#94a3b8; font-size:13px;'>({b['出自']})</span></div>", unsafe_allow_html=True)
             else:
+                # 未選択は白背景
                 if target_role.startswith("控"):
                     st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #666666; padding: 6px 10px; margin: 4px 0; border-radius: 6px;'><code>{target_role}</code> 未選択 (---)</div>", unsafe_allow_html=True)
                 else:
@@ -579,7 +594,7 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #000000; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#000000; background:#f1f5f9;'>{target_role}</code> <code style='background:#e2e8f0; color:#000000;'>投</code> <b style='color:#000000;'>{assigned_player['選手名']}</b></span><span style='color:#555555; font-size:13px;'>({assigned_player['出自']})</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background: #000000; border: 2px solid #64748b; color: #ffffff; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between;'><span><code style='color:#ffffff; background:#1e293b;'>{target_role}</code> <code style='background:#1e293b; color:#f43f5e; font-weight:bold;'>投</code> <b style='color:#ffffff;'>{assigned_player['選手名']}</b></span><span style='color:#94a3b8; font-size:13px;'>({assigned_player['出自']})</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<div style='background: #ffffff; border: 2px solid #cbd5e1; color: #666666; padding: 6px 10px; margin: 4px 0; border-radius: 6px;'><code>{target_role}</code> <code>投</code> 未選択 (---)</div>", unsafe_allow_html=True)
 
