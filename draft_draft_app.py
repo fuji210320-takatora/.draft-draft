@@ -1,15 +1,15 @@
-import streamlit as str_module
+import streamlit as st
 import random
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
 # =====================================================================
-# 1. ページ全体の基本設定 ＆ スタイル調整
+# 1. ページ全体の基本設定 ＆ スタイリッシュなカード風CSS
 # =====================================================================
-str_module.set_page_config(page_title="ドラフト×ドラフト", layout="wide")
+st.set_page_config(page_title="ドラフト×ドラフト", layout="wide")
 
-str_module.markdown("""
+st.markdown("""
 <style>
     /* フォントサイズ調整 */
     html, body, [class*="css"] {
@@ -201,7 +201,7 @@ def get_position_border_color(pos):
 # =====================================================================
 # 3. draft.tokyo スクレイピング関数
 # =====================================================================
-@str_module.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_draft_tokyo_data(team_name, year):
     target_names = get_draft_tokyo_team_names(team_name, year)
     if not target_names:
@@ -275,25 +275,25 @@ def fetch_draft_tokyo_data(team_name, year):
 # =====================================================================
 # 4. セッションステートの初期化 ＆ 同期ロジック
 # =====================================================================
-if "game_started" not in str_module.session_state:
-    str_module.session_state.game_started = False
-if "my_team" not in str_module.session_state:
-    str_module.session_state.my_team = {"batters": [], "pitchers": []}
-if "current_lottery" not in str_module.session_state:
-    str_module.session_state.current_lottery = None
-if "draft_count" not in str_module.session_state:
-    str_module.session_state.draft_count = 0
-if "skip_count" not in str_module.session_state:
-    str_module.session_state.skip_count = 0
-if "used_lotteries" not in str_module.session_state:
-    str_module.session_state.used_lotteries = set()
+if "game_started" not in st.session_state:
+    st.session_state.game_started = False
+if "my_team" not in st.session_state:
+    st.session_state.my_team = {"batters": [], "pitchers": []}
+if "current_lottery" not in st.session_state:
+    st.session_state.current_lottery = None
+if "draft_count" not in st.session_state:
+    st.session_state.draft_count = 0
+if "skip_count" not in st.session_state:
+    st.session_state.skip_count = 0
+if "used_lotteries" not in st.session_state:
+    st.session_state.used_lotteries = set()
 
 for y in all_years:
-    if f"setup_year_{y}" not in str_module.session_state:
-        str_module.session_state[f"setup_year_{y}"] = True
+    if f"setup_year_{y}" not in st.session_state:
+        st.session_state[f"setup_year_{y}"] = True
 
 def generate_year_text():
-    active_y = [y for y in all_years if str_module.session_state.get(f"setup_year_{y}", True)]
+    active_y = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
     if not active_y:
         return ""
     if len(active_y) == len(all_years):
@@ -321,16 +321,16 @@ def generate_year_text():
             parts.append(f"{start}〜{end}")
     return ", ".join(parts)
 
-if "pending_year_text" not in str_module.session_state:
-    str_module.session_state.pending_year_text = generate_year_text()
+if "pending_year_text" not in st.session_state:
+    st.session_state.pending_year_text = generate_year_text()
 
-if "year_text_input" not in str_module.session_state:
-    str_module.session_state.year_text_input = str_module.session_state.pending_year_text
+if "year_text_input" not in st.session_state:
+    st.session_state.year_text_input = st.session_state.pending_year_text
 else:
-    str_module.session_state.year_text_input = str_module.session_state.pending_year_text
+    st.session_state.year_text_input = st.session_state.pending_year_text
 
 def update_checkboxes_from_text():
-    val = str_module.session_state.get("year_text_input", "")
+    val = st.session_state.get("year_text_input", "")
     parsed_years = set()
     parts = val.replace("～", "~").replace("-", "~").replace("〜", "~").split(",")
     for part in parts:
@@ -356,93 +356,93 @@ def update_checkboxes_from_text():
                 pass
     
     for y in all_years:
-        str_module.session_state[f"setup_year_{y}"] = (y in parsed_years)
-    str_module.session_state.pending_year_text = generate_year_text()
+        st.session_state[f"setup_year_{y}"] = (y in parsed_years)
+    st.session_state.pending_year_text = generate_year_text()
 
 # =====================================================================
 # 5. スタート前画面
 # =====================================================================
-if not str_module.session_state.game_started:
-    str_module.title("⚙️ 設定画面")
-    str_module.markdown("ゲームを始める前に、チームの必要人数、スキップ上限、対象年度を設定してください。")
+if not st.session_state.game_started:
+    st.title("⚙️ 設定画面")
+    st.markdown("ゲームを始める前に、チームの必要人数、スキップ上限、対象年度を設定してください。")
     
-    str_module.markdown("---")
-    str_module.markdown("### 🏟️ チーム編成の人数設定")
-    c_p1, c_p2, c_p3 = str_module.columns(3)
+    st.markdown("---")
+    st.markdown("### 🏟️ チーム編成の人数設定")
+    c_p1, c_p2, c_p3 = st.columns(3)
     with c_p1:
-        num_starting = str_module.number_input("先発投手枠", min_value=1, max_value=10, value=1)
+        num_starting = st.number_input("先発投手枠", min_value=1, max_value=10, value=1)
     with c_p2:
-        num_relief = str_module.number_input("中継ぎ投手枠", min_value=0, max_value=10, value=1)
+        num_relief = st.number_input("中継ぎ投手枠", min_value=0, max_value=10, value=1)
     with c_p3:
-        num_closer = str_module.number_input("抑え投手枠", min_value=0, max_value=5, value=1)
+        num_closer = st.number_input("抑え投手枠", min_value=0, max_value=5, value=1)
 
-    str_module.markdown("---")
-    str_module.markdown("### ⚾ 野手人数設定")
+    st.markdown("---")
+    st.markdown("### ⚾ 野手人数設定")
     num_starting_batters = 9
-    num_sub_batters = str_module.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
+    num_sub_batters = st.number_input("控え野手の追加人数", min_value=0, max_value=20, value=0)
 
     total_batters = num_starting_batters + num_sub_batters
     total_required_drafts = num_starting + num_relief + num_closer + total_batters
-    str_module.success(f"💡 設定されたチームの総人数（必要指名数）: **{total_required_drafts} 人**")
+    st.success(f"💡 設定されたチームの総人数（必要指名数）: **{total_required_drafts} 人**")
 
-    str_module.markdown("---")
-    str_module.markdown("### 🔄 スキップ回数制限 ＆ 抽選設定")
-    skip_limit_option = str_module.selectbox("スキップ上限回数を選択", options=["無制限"] + [str(i) for i in range(21)], index=4)
+    st.markdown("---")
+    st.markdown("### 🔄 スキップ回数制限 ＆ 抽選設定")
+    skip_limit_option = st.selectbox("スキップ上限回数を選択", options=["無制限"] + [str(i) for i in range(21)], index=4)
     max_skips_val = float("inf") if skip_limit_option == "無制限" else int(skip_limit_option)
 
-    no_duplicate_lottery = str_module.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない", value=True)
+    no_duplicate_lottery = st.checkbox("一度引いたドラフト（球団×年）の組み合わせを重複させない", value=True)
 
-    str_module.markdown("---")
-    str_module.markdown("### 📅 対象年度の設定 (1965〜2025)")
+    st.markdown("---")
+    st.markdown("### 📅 対象年度の設定 (1965〜2025)")
 
-    str_module.text_input(
+    st.text_input(
         "対象年度を直接入力 (例: `2010〜2020` または `1965, 1970, 2010〜2015`)",
         key="year_text_input",
         on_change=update_checkboxes_from_text
     )
 
-    q_col1, q_col2, q_col3, q_col4 = str_module.columns(4)
+    q_col1, q_col2, q_col3, q_col4 = st.columns(4)
     
     if q_col1.button("2000年以降", use_container_width=True):
         for y in all_years:
-            str_module.session_state[f"setup_year_{y}"] = (2000 <= y <= 2025)
-        str_module.session_state.pending_year_text = generate_year_text()
-        str_module.rerun()
+            st.session_state[f"setup_year_{y}"] = (2000 <= y <= 2025)
+        st.session_state.pending_year_text = generate_year_text()
+        st.rerun()
 
     if q_col2.button("1990年以降", use_container_width=True):
         for y in all_years:
-            str_module.session_state[f"setup_year_{y}"] = (1990 <= y <= 2025)
-        str_module.session_state.pending_year_text = generate_year_text()
-        str_module.rerun()
+            st.session_state[f"setup_year_{y}"] = (1990 <= y <= 2025)
+        st.session_state.pending_year_text = generate_year_text()
+        st.rerun()
 
     if q_col3.button("すべて選択", use_container_width=True):
         for y in all_years:
-            str_module.session_state[f"setup_year_{y}"] = True
-        str_module.session_state.pending_year_text = generate_year_text()
-        str_module.rerun()
+            st.session_state[f"setup_year_{y}"] = True
+        st.session_state.pending_year_text = generate_year_text()
+        st.rerun()
         
     if q_col4.button("すべてクリア", use_container_width=True):
         for y in all_years:
-            str_module.session_state[f"setup_year_{y}"] = False
-        str_module.session_state.pending_year_text = generate_year_text()
-        str_module.rerun()
+            st.session_state[f"setup_year_{y}"] = False
+        st.session_state.pending_year_text = generate_year_text()
+        st.rerun()
 
-    str_module.markdown("")
+    st.markdown("")
     num_cols = 6
     rows = [all_years[i:i + num_cols] for i in range(0, len(all_years), num_cols)]
     
     def on_checkbox_change():
-        str_module.session_state.pending_year_text = generate_year_text()
+        st.session_state.pending_year_text = generate_year_text()
 
     for row_years in rows:
-        cols_grid = str_module.columns(num_cols)
+        cols_grid = st.columns(num_cols)
         for i, y in enumerate(row_years):
             with cols_grid[i]:
-                str_module.checkbox(f"{y}", value=str_module.session_state.get(f"setup_year_{y}", True), key=f"setup_year_{y}", on_change=on_checkbox_change)
+                st.checkbox(f"{y}", value=st.session_state.get(f"setup_year_{y}", True), key=f"setup_year_{y}", on_change=on_checkbox_change)
 
-    active_temp_years = [y for y in all_years if str_module.session_state.get(f"setup_year_{y}", True)]
+    active_temp_years = [y for y in all_years if st.session_state.get(f"setup_year_{y}", True)]
     
-    str_module.markdown("---")
+    st.markdown("---")
 
     total_possible_combinations = 0
     for y in active_temp_years:
@@ -452,65 +452,69 @@ if not str_module.session_state.game_started:
 
     max_possible_trials = total_required_drafts if max_skips_val == float("inf") else (total_required_drafts + max_skips_val)
 
-    str_module.info(f"📊 選択された年度の利用可能な総組み合わせ数: **約 {total_possible_combinations} 回** (選択年数: {len(active_temp_years)}年)")
+    st.info(f"📊 選択された年度の利用可能な総組み合わせ数: **約 {total_possible_combinations} 回** (選択年数: {len(active_temp_years)}年)")
 
     can_start = True
     if len(active_temp_years) == 0:
-        str_module.error("⚠️ エラー: 対象年度が1つも選択されていません。")
+        st.error("⚠️ エラー: 対象年度が1つも選択されていません。")
         can_start = False
     elif no_duplicate_lottery and max_possible_trials > total_possible_combinations:
-        str_module.error(f"⚠️ エラー: 必要人数＋スキップ上限の合計が、選択された年度の最大組み合わせ数を超えています！")
+        st.error(f"⚠️ エラー: 必要人数＋スキップ上限の合計が、選択された年度の最大組み合わせ数を超えています！")
         can_start = False
 
-    if str_module.button("🚀 この設定でゲームスタート！", type="primary", use_container_width=True, disabled=not can_start):
-        str_module.session_state.selected_years = active_temp_years
-        str_module.session_state.max_skips = max_skips_val
-        str_module.session_state.no_duplicate_lottery = no_duplicate_lottery
-        str_module.session_state.config_num_starting = num_starting
-        str_module.session_state.config_num_relief = num_relief
-        str_module.session_state.config_num_closer = num_closer
-        str_module.session_state.config_num_batters = total_batters
-        str_module.session_state.max_drafts = total_required_drafts
+    if st.button("🚀 この設定でゲームスタート！", type="primary", use_container_width=True, disabled=not can_start):
+        st.session_state.selected_years = active_temp_years
+        st.session_state.max_skips = max_skips_val
+        st.session_state.no_duplicate_lottery = no_duplicate_lottery
+        st.session_state.config_num_starting = num_starting
+        st.session_state.config_num_relief = num_relief
+        st.session_state.config_num_closer = num_closer
+        st.session_state.config_num_batters = total_batters
+        st.session_state.max_drafts = total_required_drafts
         
-        str_module.session_state.game_started = True
-        str_module.session_state.draft_count = 0
-        str_module.session_state.skip_count = 0
-        str_module.session_state.my_team = {"batters": [], "pitchers": []}
-        str_module.session_state.current_lottery = None
-        str_module.session_state.used_lotteries = set()
-        str_module.rerun()
+        st.session_state.game_started = True
+        st.session_state.draft_count = 0
+        st.session_state.skip_count = 0
+        st.session_state.my_team = {"batters": [], "pitchers": []}
+        st.session_state.current_lottery = None
+        st.session_state.used_lotteries = set()
+        st.rerun()
 
 # =====================================================================
 # 6. メインゲーム画面
 # =====================================================================
 else:
-    max_skips = str_module.session_state.max_skips
-    selected_years = str_module.session_state.selected_years
-    max_drafts = str_module.session_state.max_drafts
-    no_duplicate_lottery = str_module.session_state.no_duplicate_lottery
+    max_skips = st.session_state.max_skips
+    selected_years = st.session_state.selected_years
+    max_drafts = st.session_state.max_drafts
+    no_duplicate_lottery = st.session_state.no_duplicate_lottery
 
-    num_starting = str_module.session_state.config_num_starting
-    num_relief = str_module.session_state.config_num_relief
-    num_closer = str_module.session_state.config_num_closer
-    num_batters = str_module.session_state.config_num_batters
+    num_starting = st.session_state.config_num_starting
+    num_relief = st.session_state.config_num_relief
+    num_closer = st.session_state.config_num_closer
+    num_batters = st.session_state.config_num_batters
 
     all_defensive_positions = ["捕手", "一塁手", "二塁手", "三塁手", "遊撃手", "左翼手", "中堅手", "右翼手", "指名打者"]
 
-    str_module.sidebar.title("📋 メニュー")
-    if str_module.sidebar.button("⚙️ 設定を変更してやり直す", use_container_width=True):
-        str_module.session_state.game_started = False
-        str_module.rerun()
+    st.sidebar.title("📋 メニュー")
+    if st.sidebar.button("⚙️ 設定を変更してやり直す", use_container_width=True):
+        st.session_state.game_started = False
+        st.rerun()
 
-    str_module.title("⚾ ドラフト×ドラフト")
-    str_module.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
+    st.title("⚾ ドラフト×ドラフト")
+    st.markdown(f"選択中年度: <code>{min(selected_years)} 〜 {max(selected_years)} ({len(selected_years)}年間)</code>", unsafe_allow_html=True)
 
-    col_sub, col_main = str_module.columns([1, 1.2])
+    col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        str_module.subheader("🏟️ チーム編成ボード")
+        # 黒背景を撤廃し、通常のフラットな枠組みのデザインに修正
+        board_html = """
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); background-color: #ffffff;">
+            <h3 style="margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; color: #1e293b;">🏟️ チーム編成ボード</h3>
+        """
 
         # 野手陣セクション
-        str_module.markdown(f"**【野手陣 ({len(str_module.session_state.my_team['batters'])} / {num_batters}人)】**")
+        board_html += f'<div style="color: #334155; margin-bottom: 6px; margin-top: 10px;"><b>【野手陣 ({len(st.session_state.my_team["batters"])} / {num_batters}人)】</b></div>'
         
         batter_template_roles = [str(i) for i in range(1, 10)]
         bench_count = max(0, num_batters - 9)
@@ -520,28 +524,40 @@ else:
             else:
                 batter_template_roles.append(f"控{i}")
 
-        existing_batters_dict = {b["打順/役割"]: b for b in str_module.session_state.my_team["batters"]}
+        existing_batters_dict = {b["打順/役割"]: b for b in st.session_state.my_team["batters"]}
         
         for target_role in batter_template_roles:
             if target_role in existing_batters_dict:
                 b = existing_batters_dict[target_role]
+                pos_border_col = get_position_border_color(b['守備位置'])
                 pos_short = get_position_short_name(b["守備位置"]) if b["守備位置"] != "---" else "-"
-                str_module.markdown(
-                    f"- <code>{target_role}</code> : **{b['選手名']}** "
-                    f"(`{pos_short}`) <span style='color:gray; font-size:12px;'>({b['出自']})</span>",
-                    unsafe_allow_html=True
-                )
+                
+                board_html += f"""
+                <div style='background: #f8fafc; border: 1px solid #e2e8f0; color: #0f172a; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                    <span>
+                        <code style='color:#334155; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 2px solid {pos_border_col}; background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>{pos_short}</span> 
+                        <b style='color:#0f172a; margin-left: 6px;'>{b['選手名']}</b>
+                    </span>
+                    <span style='color:#64748b; font-size:13px;'>({b['出自']})</span>
+                </div>
+                """
             else:
-                str_module.markdown(
-                    f"- <code>{target_role}</code> : <span style='color:gray;'>未選択 (---)</span>",
-                    unsafe_allow_html=True
-                )
+                board_html += f"""
+                <div style='background: #ffffff; border: 1px solid #e2e8f0; color: #94a3b8; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                    <span>
+                        <code style='color:#64748b; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 1px solid #cbd5e1; background: #ffffff; color: #94a3b8; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>-</span> 
+                        <span style='margin-left: 6px; color: #94a3b8;'>未選択 (---)</span>
+                    </span>
+                </div>
+                """
 
-        str_module.markdown("---")
+        board_html += '<hr style="border-color: #e2e8f0; margin: 15px 0;">'
 
         # 投手陣セクション
         total_pitcher_slots = num_starting + num_relief + num_closer
-        str_module.markdown(f"**【投手陣 ({len(str_module.session_state.my_team['pitchers'])} / {total_pitcher_slots}人)】**")
+        board_html += f'<div style="color: #334155; margin-bottom: 6px;"><b>【投手陣 ({len(st.session_state.my_team["pitchers"])} / {total_pitcher_slots}人)】</b></div>'
         
         pitcher_template_roles = []
         for i in range(1, num_starting + 1): 
@@ -552,7 +568,7 @@ else:
             pitcher_template_roles.append("抑" if num_closer == 1 else f"抑{i}")
 
         pitchers_by_role = {"先発": [], "中継ぎ": [], "抑え": []}
-        for p in str_module.session_state.my_team["pitchers"]:
+        for p in st.session_state.my_team["pitchers"]:
             if p["起用法"] in pitchers_by_role:
                 pitchers_by_role[p["起用法"]].append(p)
 
@@ -567,26 +583,41 @@ else:
                 assigned_player = pitchers_by_role["抑え"][c_idx]; c_idx += 1
 
             if assigned_player:
-                str_module.markdown(
-                    f"- <code>{target_role}</code> : **{assigned_player['選手名']}** "
-                    f"(`投`) <span style='color:gray; font-size:12px;'>({assigned_player['出自']})</span>",
-                    unsafe_allow_html=True
-                )
+                board_html += f"""
+                <div style='background: #f8fafc; border: 1px solid #e2e8f0; color: #0f172a; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                    <span>
+                        <code style='color:#334155; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 2px solid #0284c7; background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: bold; font-size: 13px;'>投</span> 
+                        <b style='color:#0f172a; margin-left: 6px;'>{assigned_player['選手名']}</b>
+                    </span>
+                    <span style='color:#64748b; font-size:13px;'>({assigned_player['出自']})</span>
+                </div>
+                """
             else:
-                str_module.markdown(
-                    f"- <code>{target_role}</code> : <span style='color:gray;'>未選択 (---)</span>",
-                    unsafe_allow_html=True
-                )
+                board_html += f"""
+                <div style='background: #ffffff; border: 1px solid #e2e8f0; color: #94a3b8; padding: 6px 10px; margin: 4px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;'>
+                    <span>
+                        <code style='color:#64748b; background:#f1f5f9; border: 1px solid #cbd5e1; padding: 1px 4px; border-radius: 3px;'>{target_role}</code> 
+                        <span style='border: 1px solid #cbd5e1; background: #ffffff; color: #94a3b8; padding: 1px 6px; border-radius: 4px; font-size: 13px;'>投</span> 
+                        <span style='margin-left: 6px; color: #94a3b8;'>未選択 (---)</span>
+                    </span>
+                </div>
+                """
+
+        board_html += "</div>"
+        
+        # まとめて安全にHTMLとしてレンダリング
+        st.markdown(board_html, unsafe_allow_html=True)
 
     with col_main:
-        str_module.progress(str_module.session_state.draft_count / max_drafts)
-        str_module.write(f"**指名完了数: {str_module.session_state.draft_count} / {max_drafts} 回**")
+        st.progress(st.session_state.draft_count / max_drafts)
+        st.write(f"**指名完了数: {st.session_state.draft_count} / {max_drafts} 回**")
 
         if max_skips != float("inf"):
-            remaining_skips = max(0, max_skips - str_module.session_state.skip_count)
-            str_module.write(f"スキップ残回数: **{remaining_skips} / {max_skips} 回**")
+            remaining_skips = max(0, max_skips - st.session_state.skip_count)
+            st.write(f"スキップ残回数: **{remaining_skips} / {max_skips} 回**")
         else:
-            str_module.write(f"スキップ残回数: **無制限 (現在 {str_module.session_state.skip_count} 回使用)**")
+            st.write(f"スキップ残回数: **無制限 (現在 {st.session_state.skip_count} 回使用)**")
 
         all_possible_pool = []
         for y in selected_years:
@@ -595,79 +626,79 @@ else:
                     all_possible_pool.append((t, y))
 
         if no_duplicate_lottery:
-            active_pool = [item for item in all_possible_pool if item not in str_module.session_state.used_lotteries]
+            active_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries]
         else:
             active_pool = all_possible_pool
 
-        if str_module.session_state.draft_count >= max_drafts:
-            str_module.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
-            if str_module.button("もう一度最初から設定し直す", use_container_width=True):
-                str_module.session_state.game_started = False
-                str_module.rerun()
+        if st.session_state.draft_count >= max_drafts:
+            st.success("🎉 すべてのドラフト指名が完了しました！お疲れ様でした！")
+            if st.button("もう一度最初から設定し直す", use_container_width=True):
+                st.session_state.game_started = False
+                st.rerun()
         elif no_duplicate_lottery and not active_pool:
-            str_module.warning("⚠️ 選択された年度内のすべての球団ドラフトをすでに引き切りました！")
+            st.warning("⚠️ 選択された年度内のすべての球団ドラフトをすでに引き切りました！")
         else:
-            c1, c2 = str_module.columns(2)
+            c1, c2 = st.columns(2)
             with c1:
-                is_lottery_disabled = (str_module.session_state.current_lottery is not None)
-                if str_module.button("🎲 抽選する（球団 ＆ 年）", type="primary", disabled=is_lottery_disabled, use_container_width=True):
+                is_lottery_disabled = (st.session_state.current_lottery is not None)
+                if st.button("🎲 抽選する（球団 ＆ 年）", type="primary", disabled=is_lottery_disabled, use_container_width=True):
                     chosen_team, chosen_year = random.choice(active_pool)
                     names = get_draft_tokyo_team_names(chosen_team, chosen_year)
                     actual_team_name = names[0] if names else chosen_team
                     
                     fetched_players = fetch_draft_tokyo_data(chosen_team, chosen_year)
                     
-                    str_module.session_state.current_lottery = {
+                    st.session_state.current_lottery = {
                         "team": chosen_team,
                         "actual_team_name": actual_team_name,
                         "year": chosen_year,
                         "players": fetched_players
                     }
                     if no_duplicate_lottery:
-                        str_module.session_state.used_lotteries.add((chosen_team, chosen_year))
-                    str_module.rerun()
+                        st.session_state.used_lotteries.add((chosen_team, chosen_year))
+                    st.rerun()
             with c2:
-                is_skip_disabled = (str_module.session_state.current_lottery is None) or (str_module.session_state.skip_count >= max_skips) or (no_duplicate_lottery and len(active_pool) == 0)
+                is_skip_disabled = (st.session_state.current_lottery is None) or (st.session_state.skip_count >= max_skips) or (no_duplicate_lottery and len(active_pool) == 0)
                 skip_button_label = "🔄 スキップ（引き直す）"
-                if str_module.session_state.skip_count >= max_skips:
+                if st.session_state.skip_count >= max_skips:
                     skip_button_label = "🚫 スキップ上限に達しました"
 
-                if str_module.button(skip_button_label, disabled=is_skip_disabled, use_container_width=True):
-                    if str_module.session_state.skip_count < max_skips and (not no_duplicate_lottery or active_pool):
-                        if no_duplicate_lottery and str_module.session_state.current_lottery:
-                            current_t = str_module.session_state.current_lottery["team"]
-                            current_y = str_module.session_state.current_lottery["year"]
-                            str_module.session_state.used_lotteries.add((current_t, current_y))
+                if st.button(skip_button_label, disabled=is_skip_disabled, use_container_width=True):
+                    if st.session_state.skip_count < max_skips and (not no_duplicate_lottery or active_pool):
+                        if no_duplicate_lottery and st.session_state.current_lottery:
+                            current_t = st.session_state.current_lottery["team"]
+                            current_y = st.session_state.current_lottery["year"]
+                            st.session_state.used_lotteries.add((current_t, current_y))
 
-                        updated_active_pool = [item for item in all_possible_pool if item not in str_module.session_state.used_lotteries] if no_duplicate_lottery else all_possible_pool
+                        updated_active_pool = [item for item in all_possible_pool if item not in st.session_state.used_lotteries] if no_duplicate_lottery else all_possible_pool
                         
                         if not no_duplicate_lottery or updated_active_pool:
-                            str_module.session_state.skip_count += 1
+                            st.session_state.skip_count += 1
                             chosen_team, chosen_year = random.choice(updated_active_pool)
                             names = get_draft_tokyo_team_names(chosen_team, chosen_year)
                             actual_team_name = names[0] if names else chosen_team
                             
                             fetched_players = fetch_draft_tokyo_data(chosen_team, chosen_year)
                                 
-                            str_module.session_state.current_lottery = {
+                            st.session_state.current_lottery = {
                                 "team": chosen_team,
                                 "actual_team_name": actual_team_name,
                                 "year": chosen_year,
                                 "players": fetched_players
                             }
                             if no_duplicate_lottery:
-                                str_module.session_state.used_lotteries.add((chosen_team, chosen_year))
-                            str_module.rerun()
+                                st.session_state.used_lotteries.add((chosen_team, chosen_year))
+                            st.rerun()
 
-        if str_module.session_state.current_lottery:
-            lottery = str_module.session_state.current_lottery
+        if st.session_state.current_lottery:
+            lottery = st.session_state.current_lottery
             
-            str_module.info(f"✨ 抽選結果： **{lottery['year']}年** の **{lottery['actual_team_name']}** が選ばれました！")
+            st.info(f"✨ 抽選結果： **{lottery['year']}年** の **{lottery['actual_team_name']}** が選ばれました！")
             
             if not lottery["players"]:
-                str_module.warning("⚠️ この年のデータが取得できませんでした。別のボタンで引き直してください。")
+                st.warning("⚠️ この年のデータが取得できませんでした。別のボタンで引き直してください。")
             else:
-                str_module.subheader("📋 指名候補選手一覧")
+                st.subheader("📋 指名候補選手一覧")
                 display_players = [
                     {
                         "順位": p["rank_str"], 
@@ -685,18 +716,18 @@ else:
                     return [''] * len(row)
 
                 styled_df = players_df.style.apply(highlight_special_status, axis=1)
-                str_module.dataframe(styled_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
+                st.dataframe(styled_df, use_container_width=True, hide_index=True, height=min(400, 38 + len(players_df) * 35))
                 
-                str_module.subheader("✍️ 選手を指名して役割を決定する")
-                role_type = str_module.radio("選手タイプを選択してください", ["野手", "投手"], horizontal=True, key="role_type_radio")
+                st.subheader("✍️ 選手を指名して役割を決定する")
+                role_type = st.radio("選手タイプを選択してください", ["野手", "投手"], horizontal=True, key="role_type_radio")
                 
-                current_batters_count = len(str_module.session_state.my_team["batters"])
-                current_starting_count = sum(1 for p in str_module.session_state.my_team["pitchers"] if p["起用法"] == "先発")
-                current_relief_count = sum(1 for p in str_module.session_state.my_team["pitchers"] if p["起用法"] == "中継ぎ")
-                current_closer_count = sum(1 for p in str_module.session_state.my_team["pitchers"] if p["起用法"] == "抑え")
+                current_batters_count = len(st.session_state.my_team["batters"])
+                current_starting_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "先発")
+                current_relief_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "中継ぎ")
+                current_closer_count = sum(1 for p in st.session_state.my_team["pitchers"] if p["起用法"] == "抑え")
                 
                 player_options = {f"[{p['category']}] {p['rank_str']}: {p['name']} ({p['pos']} / {p['status']})": p for p in lottery["players"]}
-                selected_key = str_module.selectbox("指名する選手を選択", options=list(player_options.keys()))
+                selected_key = st.selectbox("指名する選手を選択", options=list(player_options.keys()))
                 
                 assigned_bat_role = ""
                 assigned_pos = "-"
@@ -704,52 +735,52 @@ else:
                 
                 if role_type == "野手":
                     if current_batters_count >= num_batters:
-                        str_module.warning("⚠️ 野手枠はすでに満員です！")
+                        st.warning("⚠️ 野手枠はすでに満員です！")
                     
                     available_batter_roles = []
                     for i in range(1, 10):
                         role_name = str(i)
-                        if not any(b["打順/役割"] == role_name for b in str_module.session_state.my_team["batters"]):
+                        if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                     
                     bench_max = max(0, num_batters - 9)
                     for i in range(1, bench_max + 1):
                         role_name = f"控{'①②③④⑤⑥⑦⑧⑨⑩'[i-1] if i <= 10 else i}"
-                        if not any(b["打順/役割"] == role_name for b in str_module.session_state.my_team["batters"]):
+                        if not any(b["打順/役割"] == role_name for b in st.session_state.my_team["batters"]):
                             available_batter_roles.append(role_name)
                             
-                    assigned_bat_role = str_module.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
+                    assigned_bat_role = st.selectbox("打順・役割を選択", options=available_batter_roles if available_batter_roles else ["満員"])
                     
                     if "控" in assigned_bat_role:
                         assigned_pos = "---"
                     else:
-                        used_positions = [b["守備位置"] for b in str_module.session_state.my_team["batters"] if b["守備位置"] != "---"]
+                        used_positions = [b["守備位置"] for b in st.session_state.my_team["batters"] if b["守備位置"] != "---"]
                         available_positions = [pos for pos in all_defensive_positions if pos not in used_positions]
-                        assigned_pos = str_module.selectbox("守備ポジションを選択", options=available_positions if available_positions else ["すべてのポジションが埋まっています"])
+                        assigned_pos = st.selectbox("守備ポジションを選択", options=available_positions if available_positions else ["すべてのポジションが埋まっています"])
                 else:
                     available_pitcher_types = []
                     if current_starting_count < num_starting: available_pitcher_types.append("先発")
                     if current_relief_count < num_relief: available_pitcher_types.append("中継ぎ")
                     if current_closer_count < num_closer: available_pitcher_types.append("抑え")
-                    assigned_pitcher_role = str_module.selectbox("投手起用法を選択", options=available_pitcher_types if available_pitcher_types else ["満員"])
+                    assigned_pitcher_role = st.selectbox("投手起用法を選択", options=available_pitcher_types if available_pitcher_types else ["満員"])
                 
-                if str_module.button("この選手を決定して登録！", type="primary", use_container_width=True):
+                if st.button("この選手を決定して登録！", type="primary", use_container_width=True):
                     chosen_player = player_options[selected_key]
                     if role_type == "野手" and (current_batters_count >= num_batters or assigned_bat_role == "満員" or (not "控" in assigned_bat_role and assigned_pos == "すべてのポジションが埋まっています")):
-                        str_module.error("野手枠が上限に達しているか、選べる打順・ポジションがありません。")
+                        st.error("野手枠が上限に達しているか、選べる打順・ポジションがありません。")
                     elif role_type == "投手" and assigned_pitcher_role == "満員":
-                        str_module.error("選べる投手起用法枠がありません。")
+                        st.error("選べる投手起用法枠がありません。")
                     else:
                         short_team_name = get_short_team_name(lottery['actual_team_name'], lottery['year'])
                         y_str = str(lottery['year'])[-2:]
                         origin_text = f"'{y_str} {short_team_name}・{chosen_player['rank_str']}"
                         
                         if role_type == "野手":
-                            str_module.session_state.my_team["batters"].append({"打順/役割": assigned_bat_role, "守備位置": assigned_pos, "選手名": chosen_player["name"], "出自": origin_text})
+                            st.session_state.my_team["batters"].append({"打順/役割": assigned_bat_role, "守備位置": assigned_pos, "選手名": chosen_player["name"], "出自": origin_text})
                         else:
-                            str_module.session_state.my_team["pitchers"].append({"起用法": assigned_pitcher_role, "選手名": chosen_player["name"], "出自": origin_text})
+                            st.session_state.my_team["pitchers"].append({"起用法": assigned_pitcher_role, "選手名": chosen_player["name"], "出自": origin_text})
                         
-                        str_module.session_state.draft_count += 1
-                        str_module.session_state.current_lottery = None
-                        str_module.success(f"{chosen_player['name']} 選手を指名しました！")
-                        str_module.rerun()
+                        st.session_state.draft_count += 1
+                        st.session_state.current_lottery = None
+                        st.success(f"{chosen_player['name']} 選手を指名しました！")
+                        st.rerun()
