@@ -191,11 +191,11 @@ def get_position_short_name(pos):
 
 def get_position_border_color(pos):
     if pos == "捕手":
-        return "#0284c7" # 青系
+        return "#0284c7"
     elif pos in ["一塁手", "二塁手", "三塁手", "遊撃手"]:
-        return "#ca8a04" # 黄・オレンジ系
+        return "#ca8a04"
     elif pos in ["左翼手", "中堅手", "右翼手"]:
-        return "#16a34a" # 緑系
+        return "#16a34a"
     return "#000000"
 
 # =====================================================================
@@ -507,7 +507,7 @@ else:
     col_sub, col_main = st.columns([1, 1.2])
 
     with col_sub:
-        # 完全に独立した黒背景のカードコンテナを作成
+        # 完全なHTML文字列を一括構築
         board_html = """
         <div style="background-color: #000000; border: 1px solid #333333; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
             <h3 style="color: #ffffff; margin-top: 0; border-bottom: 2px solid #555555; padding-bottom: 8px;">🏟️ チーム編成ボード</h3>
@@ -606,7 +606,7 @@ else:
 
         board_html += "</div>"
         
-        # まとめて安全にHTMLとしてレンダリング
+        # まとめて一度だけレンダリング
         st.markdown(board_html, unsafe_allow_html=True)
 
     with col_main:
